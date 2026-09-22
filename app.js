@@ -1,13 +1,13 @@
 /**
  * PRISMA 2020 Flowchart Generator
- * Aplicação Web Moderna para Geração de Fluxogramas PRISMA 2020
- * Desenvolvido para Nathan - Revisão Sistemática
+ * Modern Standalone Web App for PRISMA 2020 Flow Diagrams
+ * Designed for Nathan - Systematic Review
  */
 
-// ESTADO GLOBAL DA APLICAÇÃO
+// GLOBAL APPLICATION STATE
 const state = {
   options: {
-    lang: 'pt',
+    lang: 'en', // Default English as requested for research
     theme: 'official', // 'official', 'classic', 'modern_blue'
     previous: false,
     other: true,
@@ -28,7 +28,7 @@ const state = {
     ],
     registers: [
       { name: "ClinicalTrials.gov", count: 25 },
-      { name: "ReBec", count: 10 }
+      { name: "EU Clinical Trials", count: 10 }
     ],
     website_results: 45,
     organisation_results: 20,
@@ -42,17 +42,17 @@ const state = {
     dbr_notretrieved_reports: 12,
     dbr_assessed: 148,
     dbr_reasons: [
-      { reason: "População incompatível com os critérios", count: 48 },
-      { reason: "Intervenção não avaliada", count: 35 },
-      { reason: "Delineamento inadequado (não ECR)", count: 26 },
-      { reason: "Desfechos primários ausentes", count: 14 }
+      { reason: "Incompatible population criteria", count: 48 },
+      { reason: "Intervention not assessed", count: 35 },
+      { reason: "Inappropriate study design (non-RCT)", count: 26 },
+      { reason: "Primary outcomes not reported", count: 14 }
     ],
     other_sought_reports: 80,
     other_notretrieved_reports: 5,
     other_assessed: 75,
     other_reasons: [
-      { reason: "Critérios de inclusão não atendidos", count: 42 },
-      { reason: "Dados insuficientes para análise", count: 18 }
+      { reason: "Inclusion criteria not met", count: 42 },
+      { reason: "Insufficient data for synthesis", count: 18 }
     ],
     new_studies: 25,
     new_reports: 31,
@@ -63,16 +63,48 @@ const state = {
   }
 };
 
-// DICIONÁRIO DE TEXTOS OFICIAIS (PORTUGUÊS & INGLÊS)
+// I18N DICTIONARY FOR TEXTS (ENGLISH & PORTUGUESE)
 const i18n = {
+  en: {
+    stage_ident: "Identification",
+    stage_screen: "Screening",
+    stage_inc: "Included",
+    header_db: "Identification of new studies via databases and registers",
+    header_other: "Identification of new studies via other methods",
+    header_prev: "Previous studies",
+    rec_identified_from: "Records identified from*:",
+    databases: "Databases",
+    registers: "Registers",
+    removed_before_screening: "Records removed before screening:",
+    duplicates: "Duplicate records removed",
+    auto_excluded: "Records marked as ineligible by automation tools",
+    other_removed: "Records removed for other reasons",
+    records_screened: "Records screened",
+    records_excluded: "Records excluded**",
+    reports_sought: "Reports sought for retrieval",
+    reports_not_retrieved: "Reports not retrieved",
+    reports_assessed: "Reports assessed for eligibility",
+    reports_excluded: "Reports excluded:",
+    websites: "Websites",
+    organisations: "Organisations",
+    citations: "Citation searching",
+    new_studies_inc: "New studies included in review",
+    new_reports_inc: "Reports of new included studies",
+    prev_studies_inc: "Studies included in previous version of review",
+    prev_reports_inc: "Reports of studies included in previous version of review",
+    total_studies_inc: "Total studies included in review",
+    total_reports_inc: "Total reports of studies included",
+    ma_studies_inc: "Studies included in meta-analysis",
+    ma_reports_inc: "Reports of studies included in meta-analysis"
+  },
   pt: {
-    stage_ident: "IDENTIFICAÇÃO",
-    stage_screen: "TRIAGEM",
-    stage_inc: "INCLUÍDOS",
+    stage_ident: "Identificação",
+    stage_screen: "Triagem",
+    stage_inc: "Incluídos",
     header_db: "Identificação de novos estudos através de bases de dados e registros",
     header_other: "Identificação de novos estudos através de outros métodos",
     header_prev: "Estudos anteriores",
-    rec_identified_from: "Registros identificados em:",
+    rec_identified_from: "Registros identificados em*:",
     databases: "Bases de dados",
     registers: "Registros de ensaios",
     removed_before_screening: "Registros removidos antes da triagem:",
@@ -80,7 +112,7 @@ const i18n = {
     auto_excluded: "Marcados como inelegíveis por ferramentas automatizadas",
     other_removed: "Removidos por outras razões",
     records_screened: "Registros triados",
-    records_excluded: "Registros excluídos",
+    records_excluded: "Registros excluídos**",
     reports_sought: "Relatórios buscados para recuperação",
     reports_not_retrieved: "Relatórios não recuperados",
     reports_assessed: "Relatórios avaliados para elegibilidade",
@@ -96,412 +128,510 @@ const i18n = {
     total_reports_inc: "Total de relatórios de estudos incluídos",
     ma_studies_inc: "Estudos incluídos na metanálise",
     ma_reports_inc: "Relatórios de estudos incluídos na metanálise"
-  },
-  en: {
-    stage_ident: "IDENTIFICATION",
-    stage_screen: "SCREENING",
-    stage_inc: "INCLUDED",
-    header_db: "Identification of new studies via databases and registers",
-    header_other: "Identification of new studies via other methods",
-    header_prev: "Previous studies",
-    rec_identified_from: "Records identified from:",
-    databases: "Databases",
-    registers: "Registers",
-    removed_before_screening: "Records removed before screening:",
-    duplicates: "Duplicate records removed",
-    auto_excluded: "Records marked as ineligible by automation tools",
-    other_removed: "Records removed for other reasons",
-    records_screened: "Records screened",
-    records_excluded: "Records excluded",
-    reports_sought: "Reports sought for retrieval",
-    reports_not_retrieved: "Reports not retrieved",
-    reports_assessed: "Reports assessed for eligibility",
-    reports_excluded: "Reports excluded:",
-    websites: "Websites",
-    organisations: "Organisations",
-    citations: "Citation searching",
-    new_studies_inc: "New studies included in review",
-    new_reports_inc: "Reports of new included studies",
-    prev_studies_inc: "Studies included in previous version of review",
-    prev_reports_inc: "Reports of studies included in previous version of review",
-    total_studies_inc: "Total studies included in review",
-    total_reports_inc: "Reports of total included studies",
-    ma_studies_inc: "Total studies included in meta-analysis",
-    ma_reports_inc: "Reports of total included studies in meta-analysis"
   }
 };
 
-// TEMAS DE CORES
+// VISUAL THEMES
 const themes = {
   official: {
-    headerDbBg: "#f5a623",
-    headerDbText: "#ffffff",
-    headerOtherBg: "#e2e8f0",
-    headerOtherText: "#334155",
+    headerDbBg: "#f5b133", // Official Amber/Goldenrod
+    headerDbText: "#000000",
+    headerOtherBg: "#dcdcdc", // Official Gainsboro Grey
+    headerOtherText: "#000000",
     headerPrevBg: "#e2e8f0",
-    headerPrevText: "#334155",
-    stageBadgeBg: "#0284c7",
-    stageBadgeText: "#ffffff",
-    boxBg: "#ffffff",
-    boxBorder: "#0f172a",
-    arrowColor: "#0f172a",
-    textColor: "#0f172a",
-    subtextColor: "#334155"
+    headerPrevText: "#000000",
+    stageBadgeBg: "#adcbf0", // Official Soft Periwinkle Blue
+    stageBadgeText: "#1e293b",
+    mainBoxBg: "#ffffff",
+    mainBoxBorder: "#000000",
+    otherBoxBg: "#dcdcdc",
+    otherBoxBorder: "none",
+    textColor: "#000000",
+    arrowColor: "#000000"
   },
   classic: {
-    headerDbBg: "#f1f5f9",
-    headerDbText: "#0f172a",
-    headerOtherBg: "#f1f5f9",
-    headerOtherText: "#0f172a",
-    headerPrevBg: "#f1f5f9",
-    headerPrevText: "#0f172a",
-    stageBadgeBg: "#475569",
-    stageBadgeText: "#ffffff",
-    boxBg: "#ffffff",
-    boxBorder: "#000000",
-    arrowColor: "#000000",
+    headerDbBg: "#ffffff",
+    headerDbText: "#000000",
+    headerOtherBg: "#ffffff",
+    headerOtherText: "#000000",
+    headerPrevBg: "#ffffff",
+    headerPrevText: "#000000",
+    stageBadgeBg: "#f1f5f9",
+    stageBadgeText: "#334155",
+    mainBoxBg: "#ffffff",
+    mainBoxBorder: "#000000",
+    otherBoxBg: "#f8fafc",
+    otherBoxBorder: "#000000",
     textColor: "#000000",
-    subtextColor: "#1e293b"
+    arrowColor: "#000000"
   },
   modern_blue: {
     headerDbBg: "#3b82f6",
     headerDbText: "#ffffff",
     headerOtherBg: "#64748b",
     headerOtherText: "#ffffff",
-    headerPrevBg: "#64748b",
+    headerPrevBg: "#94a3b8",
     headerPrevText: "#ffffff",
-    stageBadgeBg: "#1d4ed8",
-    stageBadgeText: "#ffffff",
-    boxBg: "#f8fafc",
-    boxBorder: "#3b82f6",
-    arrowColor: "#1d4ed8",
+    stageBadgeBg: "#dbeafe",
+    stageBadgeText: "#1e40af",
+    mainBoxBg: "#ffffff",
+    mainBoxBorder: "#2563eb",
+    otherBoxBg: "#f1f5f9",
+    otherBoxBorder: "#94a3b8",
     textColor: "#0f172a",
-    subtextColor: "#334155"
+    arrowColor: "#1e40af"
   }
 };
 
-// ESTADO DO ZOOM E PAN
+// PAN & ZOOM STATE
 let zoomLevel = 1.0;
+let panX = 0;
+let panY = 0;
+let isDragging = false;
+let startDragX = 0;
+let startDragY = 0;
 
-// INICIALIZAÇÃO DA APLICAÇÃO
+// INITIALIZATION
 document.addEventListener("DOMContentLoaded", () => {
-  initFromPersistence();
-  setupEventListeners();
-  renderFormLists();
-  syncUIFromState();
-  renderDiagram();
+  initApp();
 });
 
-// SINCRONIZAÇÃO COM URL HASH OU LOCALSTORAGE
-function initFromPersistence() {
+function initApp() {
+  loadSavedState();
+  renderFormLists();
+  syncUIFromState();
+  initPanAndZoom();
+  bindEvents();
+  renderDiagram();
+
+  // Fit diagram to viewport initially after DOM render
+  setTimeout(() => {
+    fitToScreen();
+  }, 100);
+}
+
+// RESTORE STATE FROM URL HASH OR LOCAL STORAGE
+function loadSavedState() {
   const hash = window.location.hash;
-  if (hash && hash.startsWith('#data=')) {
+  if (hash && hash.startsWith("#data=")) {
     try {
-      const compressed = hash.substring(6);
+      const compressed = hash.replace("#data=", "");
       const jsonStr = LZString.decompressFromEncodedURIComponent(compressed);
       if (jsonStr) {
         const loaded = JSON.parse(jsonStr);
-        if (loaded.options && loaded.data) {
-          Object.assign(state.options, loaded.options);
-          Object.assign(state.data, loaded.data);
-          showToast("Dados carregados com sucesso via link da nuvem!");
-          return;
-        }
-      }
-    } catch (e) {
-      console.warn("Não foi possível carregar do hash:", e);
-    }
-  }
-
-  // Tentar carregar do LocalStorage
-  const saved = localStorage.getItem("prisma2020_nathan_state");
-  if (saved) {
-    try {
-      const loaded = JSON.parse(saved);
-      if (loaded.options && loaded.data) {
-        Object.assign(state.options, loaded.options);
-        Object.assign(state.data, loaded.data);
+        if (loaded.options) Object.assign(state.options, loaded.options);
+        if (loaded.data) Object.assign(state.data, loaded.data);
+        showToast("Flowchart state loaded from URL Link!");
         return;
       }
     } catch (e) {
-      console.warn("Erro ao ler LocalStorage:", e);
+      console.warn("Error decoding URL data hash:", e);
+    }
+  }
+
+  const localSaved = localStorage.getItem("prisma2020_nathan_state");
+  if (localSaved) {
+    try {
+      const loaded = JSON.parse(localSaved);
+      if (loaded.options) Object.assign(state.options, loaded.options);
+      if (loaded.data) Object.assign(state.data, loaded.data);
+    } catch (e) {
+      console.warn("Error decoding localStorage state:", e);
     }
   }
 }
 
-// SALVAR AUTOMATICAMENTE NO LOCALSTORAGE
+// AUTO-SAVE TO LOCALSTORAGE & CLOUD HASH
+let saveTimeout = null;
 function autoSave() {
-  localStorage.setItem("prisma2020_nathan_state", JSON.stringify(state));
-  const statusEl = document.getElementById("save-status");
-  if (statusEl) {
-    statusEl.classList.remove("hidden");
-    statusEl.innerHTML = `<i class="fa-solid fa-circle-check mr-1.5 text-emerald-500"></i><span>Salvo localmente</span>`;
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    localStorage.setItem("prisma2020_nathan_state", JSON.stringify(state));
+    
+    // Update save indicator badge
+    const badge = document.getElementById("save-status");
+    if (badge) {
+      badge.classList.remove("hidden");
+      badge.innerHTML = `<i class="fa-solid fa-circle-check mr-1.5 text-emerald-500"></i><span>Saved locally</span>`;
+    }
+  }, 400);
+}
+
+// SYNC FORM FIELDS FROM STATE
+function syncUIFromState() {
+  // Option controls
+  const optLang = document.getElementById("opt-lang");
+  if (optLang) optLang.value = state.options.lang;
+
+  const optTheme = document.getElementById("opt-theme");
+  if (optTheme) optTheme.value = state.options.theme;
+
+  const chkPrevious = document.getElementById("chk-previous");
+  if (chkPrevious) chkPrevious.checked = state.options.previous;
+
+  const chkOther = document.getElementById("chk-other");
+  if (chkOther) chkOther.checked = state.options.other;
+
+  const chkDbDetail = document.getElementById("chk-dbDetail");
+  if (chkDbDetail) chkDbDetail.checked = state.options.dbDetail;
+
+  const chkRegDetail = document.getElementById("chk-regDetail");
+  if (chkRegDetail) chkRegDetail.checked = state.options.regDetail;
+
+  const chkMeta = document.getElementById("chk-metaAnalysis");
+  if (chkMeta) chkMeta.checked = state.options.metaAnalysis;
+
+  // Toggle conditional UI sections
+  toggleConditionalCards();
+
+  // Numeric form fields
+  for (const [key, val] of Object.entries(state.data)) {
+    if (typeof val === 'number') {
+      const input = document.getElementById(`inp-${key}`);
+      if (input) input.value = val;
+    }
   }
 }
 
-// SINCRONIZAR CAMPOS DE FORMULÁRIO COM O ESTADO
-function syncUIFromState() {
-  // Opções
-  document.getElementById("opt-lang").value = state.options.lang;
-  document.getElementById("opt-theme").value = state.options.theme;
-  document.getElementById("chk-previous").checked = state.options.previous;
-  document.getElementById("chk-other").checked = state.options.other;
-  document.getElementById("chk-dbDetail").checked = state.options.dbDetail;
-  document.getElementById("chk-regDetail").checked = state.options.regDetail;
-  document.getElementById("chk-metaAnalysis").checked = state.options.metaAnalysis;
-
-  // Visibilidade de cartões condicionais
-  updateModuleVisibility();
-
-  // Campos numéricos
-  const numberFields = [
-    'previous_studies', 'previous_reports', 'database_results', 'register_results',
-    'website_results', 'organisation_results', 'citations_results',
-    'duplicates', 'excluded_automatic', 'excluded_other',
-    'records_screened', 'records_excluded',
-    'dbr_sought_reports', 'dbr_notretrieved_reports', 'dbr_assessed',
-    'other_sought_reports', 'other_notretrieved_reports', 'other_assessed',
-    'new_studies', 'new_reports', 'total_studies', 'total_reports',
-    'total_studies_ma', 'total_reports_ma'
-  ];
-
-  numberFields.forEach(field => {
-    const el = document.getElementById(`inp-${field}`);
-    if (el) {
-      el.value = state.data[field] !== undefined ? state.data[field] : 0;
-    }
-  });
-}
-
-// ATUALIZAR VISIBILIDADE DE SEÇÕES CONDICIONAIS
-function updateModuleVisibility() {
+function toggleConditionalCards() {
   const cardPrev = document.getElementById("card-previous");
-  if (cardPrev) cardPrev.classList.toggle("hidden", !state.options.previous);
+  if (cardPrev) {
+    cardPrev.classList.toggle("hidden", !state.options.previous);
+  }
 
   const containerTotalStudies = document.getElementById("container-total-studies");
-  if (containerTotalStudies) containerTotalStudies.classList.toggle("hidden", !state.options.previous);
+  if (containerTotalStudies) {
+    containerTotalStudies.classList.toggle("hidden", !state.options.previous);
+  }
 
   const containerOther = document.getElementById("container-other-methods");
-  if (containerOther) containerOther.classList.toggle("hidden", !state.options.other);
+  if (containerOther) {
+    containerOther.classList.toggle("hidden", !state.options.other);
+  }
 
-  const secEligOther = document.getElementById("sec-elig-other");
-  if (secEligOther) secEligOther.classList.toggle("hidden", !state.options.other);
-
-  const containerDbs = document.getElementById("container-specific-dbs");
-  if (containerDbs) containerDbs.classList.toggle("hidden", !state.options.dbDetail);
-
-  const containerRegs = document.getElementById("container-specific-regs");
-  if (containerRegs) containerRegs.classList.toggle("hidden", !state.options.regDetail);
+  const containerOtherEx = document.getElementById("container-other-exclusions");
+  if (containerOtherEx) {
+    containerOtherEx.classList.toggle("hidden", !state.options.other);
+  }
 
   const containerMeta = document.getElementById("container-meta-analysis");
-  if (containerMeta) containerMeta.classList.toggle("hidden", !state.options.metaAnalysis);
+  if (containerMeta) {
+    containerMeta.classList.toggle("hidden", !state.options.metaAnalysis);
+  }
 }
 
-// RENDERIZAR LISTAS DINÂMICAS (BASES, REGISTROS, MOTIVOS)
+// DYNAMIC LISTS RENDERING (Databases, Registers, Reasons)
 function renderFormLists() {
-  // 1. Bases de Dados
+  // Databases list
   const dbList = document.getElementById("db-list");
   if (dbList) {
-    dbList.innerHTML = "";
-    state.data.databases.forEach((db, idx) => {
-      const row = document.createElement("div");
-      row.className = "flex items-center space-x-2";
-      row.innerHTML = `
-        <input type="text" value="${escapeHtml(db.name)}" placeholder="Nome da base (ex: PubMed)" data-idx="${idx}" class="db-name-input flex-1 text-xs border border-slate-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none">
-        <input type="number" min="0" value="${db.count}" placeholder="Nº" data-idx="${idx}" class="db-count-input w-20 text-right text-xs border border-slate-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none">
-        <button type="button" data-idx="${idx}" class="btn-del-db p-1 text-slate-400 hover:text-rose-600 transition" title="Remover base">
+    dbList.innerHTML = state.data.databases.map((db, idx) => `
+      <div class="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+        <input type="text" value="${escapeHtml(db.name)}" data-idx="${idx}" class="db-name-input flex-1 text-xs px-2 py-1 border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500">
+        <input type="number" min="0" value="${db.count}" data-idx="${idx}" class="db-count-input w-20 text-right text-xs px-2 py-1 border border-slate-300 rounded bg-white font-medium focus:outline-none focus:ring-1 focus:ring-sky-500">
+        <button type="button" data-idx="${idx}" class="btn-del-db text-slate-400 hover:text-rose-500 p-1 transition" title="Remove database">
           <i class="fa-solid fa-trash-can text-xs"></i>
         </button>
-      `;
-      dbList.appendChild(row);
-    });
+      </div>
+    `).join("");
   }
 
-  // 2. Registros de Ensaios
+  // Clinical trial registers list
   const regList = document.getElementById("reg-list");
   if (regList) {
-    regList.innerHTML = "";
-    state.data.registers.forEach((reg, idx) => {
-      const row = document.createElement("div");
-      row.className = "flex items-center space-x-2";
-      row.innerHTML = `
-        <input type="text" value="${escapeHtml(reg.name)}" placeholder="Nome do registro (ex: ReBec)" data-idx="${idx}" class="reg-name-input flex-1 text-xs border border-slate-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none">
-        <input type="number" min="0" value="${reg.count}" placeholder="Nº" data-idx="${idx}" class="reg-count-input w-20 text-right text-xs border border-slate-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none">
-        <button type="button" data-idx="${idx}" class="btn-del-reg p-1 text-slate-400 hover:text-rose-600 transition" title="Remover registro">
+    regList.innerHTML = state.data.registers.map((reg, idx) => `
+      <div class="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+        <input type="text" value="${escapeHtml(reg.name)}" data-idx="${idx}" class="reg-name-input flex-1 text-xs px-2 py-1 border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500">
+        <input type="number" min="0" value="${reg.count}" data-idx="${idx}" class="reg-count-input w-20 text-right text-xs px-2 py-1 border border-slate-300 rounded bg-white font-medium focus:outline-none focus:ring-1 focus:ring-sky-500">
+        <button type="button" data-idx="${idx}" class="btn-del-reg text-slate-400 hover:text-rose-500 p-1 transition" title="Remove register">
           <i class="fa-solid fa-trash-can text-xs"></i>
         </button>
-      `;
-      regList.appendChild(row);
-    });
+      </div>
+    `).join("");
   }
 
-  // 3. Motivos de Exclusão de Bases
+  // Databases & Registers exclusion reasons list
   const dbrList = document.getElementById("dbr-reasons-list");
   if (dbrList) {
-    dbrList.innerHTML = "";
-    state.data.dbr_reasons.forEach((item, idx) => {
-      const row = document.createElement("div");
-      row.className = "flex items-center space-x-2";
-      row.innerHTML = `
-        <input type="text" value="${escapeHtml(item.reason)}" placeholder="Motivo da exclusão" data-idx="${idx}" class="dbr-reason-input flex-1 text-xs border border-slate-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none">
-        <input type="number" min="0" value="${item.count}" placeholder="Nº" data-idx="${idx}" class="dbr-count-input w-20 text-right text-xs border border-slate-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none font-semibold text-rose-700">
-        <button type="button" data-idx="${idx}" class="btn-del-dbr-reason p-1 text-slate-400 hover:text-rose-600 transition" title="Remover motivo">
+    dbrList.innerHTML = state.data.dbr_reasons.map((r, idx) => `
+      <div class="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+        <input type="text" value="${escapeHtml(r.reason)}" data-idx="${idx}" class="dbr-reason-input flex-1 text-xs px-2 py-1 border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500">
+        <input type="number" min="0" value="${r.count}" data-idx="${idx}" class="dbr-count-input w-20 text-right text-xs px-2 py-1 border border-slate-300 rounded bg-white font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500">
+        <button type="button" data-idx="${idx}" class="btn-del-dbr-reason text-slate-400 hover:text-rose-500 p-1 transition" title="Remove reason">
           <i class="fa-solid fa-trash-can text-xs"></i>
         </button>
-      `;
-      dbrList.appendChild(row);
+      </div>
+    `).join("");
+  }
+
+  // Other sources exclusion reasons list
+  const otherList = document.getElementById("other-reasons-list");
+  if (otherList) {
+    otherList.innerHTML = state.data.other_reasons.map((r, idx) => `
+      <div class="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+        <input type="text" value="${escapeHtml(r.reason)}" data-idx="${idx}" class="other-reason-input flex-1 text-xs px-2 py-1 border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500">
+        <input type="number" min="0" value="${r.count}" data-idx="${idx}" class="other-count-input w-20 text-right text-xs px-2 py-1 border border-slate-300 rounded bg-white font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500">
+        <button type="button" data-idx="${idx}" class="btn-del-other-reason text-slate-400 hover:text-rose-500 p-1 transition" title="Remove reason">
+          <i class="fa-solid fa-trash-can text-xs"></i>
+        </button>
+      </div>
+    `).join("");
+  }
+}
+
+// PAN & ZOOM HANDLING
+function initPanAndZoom() {
+  const viewport = document.getElementById("diagram-viewport");
+  if (!viewport) return;
+
+  // Mouse Drag to Pan
+  viewport.addEventListener("mousedown", (e) => {
+    if (e.button !== 0) return; // Only left click
+    isDragging = true;
+    startDragX = e.clientX - panX;
+    startDragY = e.clientY - panY;
+    viewport.classList.add("cursor-grabbing");
+    viewport.classList.remove("cursor-grab");
+  });
+
+  window.addEventListener("mousemove", (e) => {
+    if (!isDragging) return;
+    panX = e.clientX - startDragX;
+    panY = e.clientY - startDragY;
+    applyTransform();
+  });
+
+  window.addEventListener("mouseup", () => {
+    if (isDragging) {
+      isDragging = false;
+      viewport.classList.remove("cursor-grabbing");
+      viewport.classList.add("cursor-grab");
+    }
+  });
+
+  // Mouse Wheel / Ctrl+Wheel to Zoom
+  viewport.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
+    const rect = viewport.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const newZoom = Math.min(3.0, Math.max(0.25, zoomLevel * zoomFactor));
+    panX = mouseX - (mouseX - panX) * (newZoom / zoomLevel);
+    panY = mouseY - (mouseY - panY) * (newZoom / zoomLevel);
+    zoomLevel = newZoom;
+    applyTransform();
+  }, { passive: false });
+
+  // Zoom control buttons
+  const btnIn = document.getElementById("btn-zoom-in");
+  if (btnIn) {
+    btnIn.addEventListener("click", () => {
+      zoomLevel = Math.min(3.0, zoomLevel * 1.2);
+      applyTransform();
     });
   }
 
-  // 4. Motivos de Exclusão de Outras Fontes
-  const otherList = document.getElementById("other-reasons-list");
-  if (otherList) {
-    otherList.innerHTML = "";
-    state.data.other_reasons.forEach((item, idx) => {
-      const row = document.createElement("div");
-      row.className = "flex items-center space-x-2";
-      row.innerHTML = `
-        <input type="text" value="${escapeHtml(item.reason)}" placeholder="Motivo da exclusão" data-idx="${idx}" class="other-reason-input flex-1 text-xs border border-slate-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none">
-        <input type="number" min="0" value="${item.count}" placeholder="Nº" data-idx="${idx}" class="other-count-input w-16 text-right text-xs border border-slate-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none font-semibold text-rose-700">
-        <button type="button" data-idx="${idx}" class="btn-del-other-reason p-1 text-slate-400 hover:text-rose-600 transition" title="Remover motivo">
-          <i class="fa-solid fa-trash-can text-xs"></i>
-        </button>
-      `;
-      otherList.appendChild(row);
+  const btnOut = document.getElementById("btn-zoom-out");
+  if (btnOut) {
+    btnOut.addEventListener("click", () => {
+      zoomLevel = Math.max(0.25, zoomLevel / 1.2);
+      applyTransform();
+    });
+  }
+
+  const btnFit = document.getElementById("btn-zoom-fit");
+  if (btnFit) {
+    btnFit.addEventListener("click", fitToScreen);
+  }
+
+  const btnReset = document.getElementById("btn-zoom-reset");
+  if (btnReset) {
+    btnReset.addEventListener("click", () => {
+      zoomLevel = 1.0;
+      panX = 25;
+      panY = 25;
+      applyTransform();
     });
   }
 }
 
-// CONFIGURAÇÃO DE TODOS OS EVENT LISTENERS
-function setupEventListeners() {
-  // Alteração de Idioma e Tema
-  document.getElementById("opt-lang").addEventListener("change", (e) => {
-    state.options.lang = e.target.value;
-    autoSave();
-    renderDiagram();
-  });
+function applyTransform() {
+  const container = document.getElementById("diagram-container");
+  if (container) {
+    container.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
+  }
+  const zoomInd = document.getElementById("zoom-indicator");
+  if (zoomInd) {
+    zoomInd.textContent = `${Math.round(zoomLevel * 100)}%`;
+  }
+}
 
-  document.getElementById("opt-theme").addEventListener("change", (e) => {
-    state.options.theme = e.target.value;
-    autoSave();
-    renderDiagram();
-  });
+function fitToScreen() {
+  const viewport = document.getElementById("diagram-viewport");
+  const svg = document.getElementById("prisma-svg");
+  if (!viewport || !svg) return;
 
-  // Toggles de Módulos
-  const toggles = [
-    { id: "chk-previous", key: "previous" },
-    { id: "chk-other", key: "other" },
-    { id: "chk-dbDetail", key: "dbDetail" },
-    { id: "chk-regDetail", key: "regDetail" },
-    { id: "chk-metaAnalysis", key: "metaAnalysis" }
-  ];
+  const vpWidth = viewport.clientWidth - 40;
+  const vpHeight = viewport.clientHeight - 40;
+  const svgWidth = parseFloat(svg.getAttribute("width")) || 1000;
+  const svgHeight = parseFloat(svg.getAttribute("height")) || 800;
 
-  toggles.forEach(({ id, key }) => {
-    document.getElementById(id).addEventListener("change", (e) => {
-      state.options[key] = e.target.checked;
-      updateModuleVisibility();
+  if (svgWidth <= 0 || svgHeight <= 0) return;
+
+  const scaleX = vpWidth / svgWidth;
+  const scaleY = vpHeight / svgHeight;
+  zoomLevel = Math.min(scaleX, scaleY, 1.0); // Never exceed 100% on initial fit
+
+  panX = Math.max(10, (viewport.clientWidth - svgWidth * zoomLevel) / 2);
+  panY = Math.max(10, (viewport.clientHeight - svgHeight * zoomLevel) / 2);
+  applyTransform();
+}
+
+// BIND DOM EVENTS
+function bindEvents() {
+  // Option: Language
+  const optLang = document.getElementById("opt-lang");
+  if (optLang) {
+    optLang.addEventListener("change", (e) => {
+      state.options.lang = e.target.value;
       autoSave();
       renderDiagram();
     });
-  });
+  }
 
-  // Inputs numéricos simples
-  const numberFields = [
-    'previous_studies', 'previous_reports', 'database_results', 'register_results',
-    'website_results', 'organisation_results', 'citations_results',
-    'duplicates', 'excluded_automatic', 'excluded_other',
-    'records_screened', 'records_excluded',
-    'dbr_sought_reports', 'dbr_notretrieved_reports', 'dbr_assessed',
-    'other_sought_reports', 'other_notretrieved_reports', 'other_assessed',
-    'new_studies', 'new_reports', 'total_studies', 'total_reports',
-    'total_studies_ma', 'total_reports_ma'
+  // Option: Theme
+  const optTheme = document.getElementById("opt-theme");
+  if (optTheme) {
+    optTheme.addEventListener("change", (e) => {
+      state.options.theme = e.target.value;
+      autoSave();
+      renderDiagram();
+    });
+  }
+
+  // Option Checkboxes
+  const bindCheckbox = (id, prop) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("change", (e) => {
+        state.options[prop] = e.target.checked;
+        toggleConditionalCards();
+        autoSave();
+        renderDiagram();
+        fitToScreen();
+      });
+    }
+  };
+
+  bindCheckbox("chk-previous", "previous");
+  bindCheckbox("chk-other", "other");
+  bindCheckbox("chk-dbDetail", "dbDetail");
+  bindCheckbox("chk-regDetail", "regDetail");
+  bindCheckbox("chk-metaAnalysis", "metaAnalysis");
+
+  // Number Inputs
+  const numberInputs = [
+    "previous_studies", "previous_reports",
+    "database_results", "register_results",
+    "website_results", "organisation_results", "citations_results",
+    "duplicates", "excluded_automatic", "excluded_other",
+    "records_screened", "records_excluded",
+    "dbr_sought_reports", "dbr_notretrieved_reports", "dbr_assessed",
+    "other_sought_reports", "other_notretrieved_reports", "other_assessed",
+    "new_studies", "new_reports",
+    "total_studies", "total_reports",
+    "total_studies_ma", "total_reports_ma"
   ];
 
-  numberFields.forEach(field => {
-    const el = document.getElementById(`inp-${field}`);
-    if (el) {
-      el.addEventListener("input", (e) => {
-        state.data[field] = parseInt(e.target.value, 10) || 0;
+  numberInputs.forEach(key => {
+    const input = document.getElementById(`inp-${key}`);
+    if (input) {
+      input.addEventListener("input", (e) => {
+        state.data[key] = parseInt(e.target.value, 10) || 0;
         autoSave();
         renderDiagram();
       });
     }
   });
 
-  // Botões de Adicionar Linhas Dinâmicas
-  document.getElementById("btn-add-db").addEventListener("click", () => {
-    state.data.databases.push({ name: `Base ${state.data.databases.length + 1}`, count: 0 });
+  // Dynamic Add Buttons
+  document.getElementById("btn-add-db")?.addEventListener("click", () => {
+    state.data.databases.push({ name: `Database ${state.data.databases.length + 1}`, count: 0 });
     renderFormLists();
     autoSave();
     renderDiagram();
   });
 
-  document.getElementById("btn-add-reg").addEventListener("click", () => {
-    state.data.registers.push({ name: `Registro ${state.data.registers.length + 1}`, count: 0 });
+  document.getElementById("btn-add-reg")?.addEventListener("click", () => {
+    state.data.registers.push({ name: `Register ${state.data.registers.length + 1}`, count: 0 });
     renderFormLists();
     autoSave();
     renderDiagram();
   });
 
-  document.getElementById("btn-add-dbr-reason").addEventListener("click", () => {
-    state.data.dbr_reasons.push({ reason: `Motivo ${state.data.dbr_reasons.length + 1}`, count: 0 });
+  document.getElementById("btn-add-dbr-reason")?.addEventListener("click", () => {
+    state.data.dbr_reasons.push({ reason: `Reason ${state.data.dbr_reasons.length + 1}`, count: 0 });
     renderFormLists();
     autoSave();
     renderDiagram();
   });
 
-  document.getElementById("btn-add-other-reason").addEventListener("click", () => {
-    state.data.other_reasons.push({ reason: `Motivo ${state.data.other_reasons.length + 1}`, count: 0 });
+  document.getElementById("btn-add-other-reason")?.addEventListener("click", () => {
+    state.data.other_reasons.push({ reason: `Reason ${state.data.other_reasons.length + 1}`, count: 0 });
     renderFormLists();
     autoSave();
     renderDiagram();
   });
 
-  // Event Delegation para inputs e botões de deleção de listas dinâmicas
+  // Dynamic Item Inputs Delegation
   document.addEventListener("input", (e) => {
-    if (e.target.classList.contains("db-name-input")) {
-      const idx = e.target.getAttribute("data-idx");
-      state.data.databases[idx].name = e.target.value;
+    const t = e.target;
+    if (t.classList.contains("db-name-input")) {
+      const idx = t.getAttribute("data-idx");
+      state.data.databases[idx].name = t.value;
       autoSave();
       renderDiagram();
-    } else if (e.target.classList.contains("db-count-input")) {
-      const idx = e.target.getAttribute("data-idx");
-      state.data.databases[idx].count = parseInt(e.target.value, 10) || 0;
+    } else if (t.classList.contains("db-count-input")) {
+      const idx = t.getAttribute("data-idx");
+      state.data.databases[idx].count = parseInt(t.value, 10) || 0;
       autoSave();
       renderDiagram();
-    } else if (e.target.classList.contains("reg-name-input")) {
-      const idx = e.target.getAttribute("data-idx");
-      state.data.registers[idx].name = e.target.value;
+    } else if (t.classList.contains("reg-name-input")) {
+      const idx = t.getAttribute("data-idx");
+      state.data.registers[idx].name = t.value;
       autoSave();
       renderDiagram();
-    } else if (e.target.classList.contains("reg-count-input")) {
-      const idx = e.target.getAttribute("data-idx");
-      state.data.registers[idx].count = parseInt(e.target.value, 10) || 0;
+    } else if (t.classList.contains("reg-count-input")) {
+      const idx = t.getAttribute("data-idx");
+      state.data.registers[idx].count = parseInt(t.value, 10) || 0;
       autoSave();
       renderDiagram();
-    } else if (e.target.classList.contains("dbr-reason-input")) {
-      const idx = e.target.getAttribute("data-idx");
-      state.data.dbr_reasons[idx].reason = e.target.value;
+    } else if (t.classList.contains("dbr-reason-input")) {
+      const idx = t.getAttribute("data-idx");
+      state.data.dbr_reasons[idx].reason = t.value;
       autoSave();
       renderDiagram();
-    } else if (e.target.classList.contains("dbr-count-input")) {
-      const idx = e.target.getAttribute("data-idx");
-      state.data.dbr_reasons[idx].count = parseInt(e.target.value, 10) || 0;
+    } else if (t.classList.contains("dbr-count-input")) {
+      const idx = t.getAttribute("data-idx");
+      state.data.dbr_reasons[idx].count = parseInt(t.value, 10) || 0;
       autoSave();
       renderDiagram();
-    } else if (e.target.classList.contains("other-reason-input")) {
-      const idx = e.target.getAttribute("data-idx");
-      state.data.other_reasons[idx].reason = e.target.value;
+    } else if (t.classList.contains("other-reason-input")) {
+      const idx = t.getAttribute("data-idx");
+      state.data.other_reasons[idx].reason = t.value;
       autoSave();
       renderDiagram();
-    } else if (e.target.classList.contains("other-count-input")) {
-      const idx = e.target.getAttribute("data-idx");
-      state.data.other_reasons[idx].count = parseInt(e.target.value, 10) || 0;
+    } else if (t.classList.contains("other-count-input")) {
+      const idx = t.getAttribute("data-idx");
+      state.data.other_reasons[idx].count = parseInt(t.value, 10) || 0;
       autoSave();
       renderDiagram();
     }
   });
 
+  // Dynamic Item Delete Delegation
   document.addEventListener("click", (e) => {
     const btnDelDb = e.target.closest(".btn-del-db");
     if (btnDelDb) {
@@ -541,122 +671,116 @@ function setupEventListeners() {
     }
   });
 
-  // Botões de Cálculo Automático
-  document.getElementById("btn-sum-dbs").addEventListener("click", () => {
+  // Automatic Sum Calculators
+  document.getElementById("btn-sum-dbs")?.addEventListener("click", () => {
     const sum = state.data.databases.reduce((acc, curr) => acc + (parseInt(curr.count, 10) || 0), 0);
     state.data.database_results = sum;
-    document.getElementById("inp-database_results").value = sum;
+    const inp = document.getElementById("inp-database_results");
+    if (inp) inp.value = sum;
     autoSave();
     renderDiagram();
-    showToast(`Total de bases calculado: ${sum}`);
+    showToast(`Databases total calculated: ${sum}`);
   });
 
-  document.getElementById("btn-sum-regs").addEventListener("click", () => {
+  document.getElementById("btn-sum-regs")?.addEventListener("click", () => {
     const sum = state.data.registers.reduce((acc, curr) => acc + (parseInt(curr.count, 10) || 0), 0);
     state.data.register_results = sum;
-    document.getElementById("inp-register_results").value = sum;
+    const inp = document.getElementById("inp-register_results");
+    if (inp) inp.value = sum;
     autoSave();
     renderDiagram();
-    showToast(`Total de registros calculado: ${sum}`);
+    showToast(`Registers total calculated: ${sum}`);
   });
 
-  document.getElementById("btn-calc-screened").addEventListener("click", () => {
+  document.getElementById("btn-calc-screened")?.addEventListener("click", () => {
     const totalIdent = (state.data.database_results || 0) + (state.data.register_results || 0);
     const totalRemoved = (state.data.duplicates || 0) + (state.data.excluded_automatic || 0) + (state.data.excluded_other || 0);
     const screened = Math.max(0, totalIdent - totalRemoved);
     state.data.records_screened = screened;
-    document.getElementById("inp-records_screened").value = screened;
+    const inp = document.getElementById("inp-records_screened");
+    if (inp) inp.value = screened;
     autoSave();
     renderDiagram();
-    showToast(`Registros triados calculados: ${screened}`);
+    showToast(`Screened records calculated: ${screened}`);
   });
 
-  // Controles de Zoom
-  document.getElementById("btn-zoom-in").addEventListener("click", () => {
-    zoomLevel = Math.min(2.0, zoomLevel + 0.15);
-    applyZoom();
-  });
-  document.getElementById("btn-zoom-out").addEventListener("click", () => {
-    zoomLevel = Math.max(0.4, zoomLevel - 0.15);
-    applyZoom();
-  });
-  document.getElementById("btn-zoom-reset").addEventListener("click", () => {
-    zoomLevel = 1.0;
-    applyZoom();
-  });
-
-  // Modal Nuvem
+  // Cloud Modal Open & Close
   const cloudModal = document.getElementById("cloud-modal");
-  document.getElementById("btn-cloud-modal").addEventListener("click", () => {
+  document.getElementById("btn-cloud-modal")?.addEventListener("click", () => {
     prepareCloudModal();
-    cloudModal.classList.remove("hidden");
+    cloudModal?.classList.remove("hidden");
   });
-  document.getElementById("btn-close-modal").addEventListener("click", () => {
-    cloudModal.classList.add("hidden");
+  document.getElementById("btn-close-modal")?.addEventListener("click", () => {
+    cloudModal?.classList.add("hidden");
   });
-  document.getElementById("btn-dismiss-modal").addEventListener("click", () => {
-    cloudModal.classList.add("hidden");
+  document.getElementById("btn-dismiss-modal")?.addEventListener("click", () => {
+    cloudModal?.classList.add("hidden");
   });
 
-  // Copiar URL do Link Permanente
-  document.getElementById("btn-copy-url").addEventListener("click", () => {
+  // Copy Cloud URL
+  document.getElementById("btn-copy-url")?.addEventListener("click", () => {
     const urlInput = document.getElementById("inp-cloud-url");
-    urlInput.select();
-    navigator.clipboard.writeText(urlInput.value).then(() => {
-      document.getElementById("txt-copy-url").textContent = "Copiado!";
-      setTimeout(() => {
-        document.getElementById("txt-copy-url").textContent = "Copiar";
-      }, 2000);
-      showToast("Link permanente copiado para a área de transferência!");
-    });
-  });
-
-  // Salvar/Carregar Nuvem com ID
-  document.getElementById("btn-save-cloud").addEventListener("click", saveCloudById);
-  document.getElementById("btn-load-cloud").addEventListener("click", loadCloudById);
-
-  // Download e Upload de Arquivos
-  document.getElementById("btn-download-json").addEventListener("click", downloadJsonProject);
-  document.getElementById("inp-load-file").addEventListener("change", handleFileUpload);
-
-  // Menu Exportar Dropdown
-  const exportBtn = document.getElementById("btn-export-menu");
-  const exportMenu = document.getElementById("export-menu");
-  exportBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    exportMenu.classList.toggle("hidden");
-  });
-  document.addEventListener("click", (e) => {
-    if (!exportBtn.contains(e.target) && !exportMenu.contains(e.target)) {
-      exportMenu.classList.add("hidden");
+    if (urlInput) {
+      urlInput.select();
+      navigator.clipboard.writeText(urlInput.value).then(() => {
+        const txt = document.getElementById("txt-copy-url");
+        if (txt) {
+          txt.textContent = "Copied!";
+          setTimeout(() => { txt.textContent = "Copy"; }, 2000);
+        }
+        showToast("Permanent cloud link copied to clipboard!");
+      });
     }
   });
 
-  // Ações de Exportação
-  document.getElementById("btn-export-svg").addEventListener("click", () => {
+  // Save/Load Cloud ID
+  document.getElementById("btn-save-cloud")?.addEventListener("click", saveCloudById);
+  document.getElementById("btn-load-cloud")?.addEventListener("click", loadCloudById);
+
+  // File Download / Upload
+  document.getElementById("btn-download-json")?.addEventListener("click", downloadJsonProject);
+  document.getElementById("inp-load-file")?.addEventListener("change", handleFileUpload);
+
+  // Export Dropdown Menu
+  const exportBtn = document.getElementById("btn-export-menu");
+  const exportMenu = document.getElementById("export-menu");
+  if (exportBtn && exportMenu) {
+    exportBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      exportMenu.classList.toggle("hidden");
+    });
+    document.addEventListener("click", (e) => {
+      if (!exportBtn.contains(e.target) && !exportMenu.contains(e.target)) {
+        exportMenu.classList.add("hidden");
+      }
+    });
+  }
+
+  // Export Actions
+  document.getElementById("btn-export-svg")?.addEventListener("click", () => {
     exportSvgFile();
-    exportMenu.classList.add("hidden");
+    exportMenu?.classList.add("hidden");
   });
-  document.getElementById("btn-export-png").addEventListener("click", () => {
+  document.getElementById("btn-export-png")?.addEventListener("click", () => {
     exportPngFile();
-    exportMenu.classList.add("hidden");
+    exportMenu?.classList.add("hidden");
   });
-  document.getElementById("btn-copy-png").addEventListener("click", () => {
+  document.getElementById("btn-copy-png")?.addEventListener("click", () => {
     copyPngToClipboard();
-    exportMenu.classList.add("hidden");
+    exportMenu?.classList.add("hidden");
   });
-  document.getElementById("btn-print-pdf").addEventListener("click", () => {
+  document.getElementById("btn-print-pdf")?.addEventListener("click", () => {
     window.print();
-    exportMenu.classList.add("hidden");
+    exportMenu?.classList.add("hidden");
   });
-  document.getElementById("btn-export-csv").addEventListener("click", () => {
+  document.getElementById("btn-export-csv")?.addEventListener("click", () => {
     exportCsvFile();
-    exportMenu.classList.add("hidden");
+    exportMenu?.classList.add("hidden");
   });
 
-  // Botão Reset
-  document.getElementById("btn-reset").addEventListener("click", () => {
-    if (confirm("Deseja realmente redefinir todos os dados para o padrão inicial do PRISMA 2020?")) {
+  // Reset Button
+  document.getElementById("btn-reset")?.addEventListener("click", () => {
+    if (confirm("Reset flowchart to official PRISMA 2020 defaults?")) {
       localStorage.removeItem("prisma2020_nathan_state");
       window.location.hash = "";
       location.reload();
@@ -664,14 +788,7 @@ function setupEventListeners() {
   });
 }
 
-function applyZoom() {
-  const container = document.getElementById("diagram-container");
-  if (container) {
-    container.style.transform = `scale(${zoomLevel})`;
-  }
-}
-
-// TOGGLE DAS SEÇÕES DO ACORDEÃO
+// ACCORDION SECTION TOGGLE
 function toggleSection(sectionId) {
   const el = document.getElementById(sectionId);
   const icon = document.getElementById(`icon-${sectionId}`);
@@ -683,72 +800,77 @@ function toggleSection(sectionId) {
   }
 }
 
-// PREPARAR MODAL DE SALVAMENTO EM NUVEM
+// PREPARE CLOUD PERMANENT URL
 function prepareCloudModal() {
   const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(state));
   const fullUrl = `${window.location.origin}${window.location.pathname}#data=${compressed}`;
-  document.getElementById("inp-cloud-url").value = fullUrl;
+  const inp = document.getElementById("inp-cloud-url");
+  if (inp) inp.value = fullUrl;
 }
 
-// TROCA DE ABAS DO MODAL
+// SWITCH MODAL TABS
 function switchModalTab(tab) {
   const tabs = ['url', 'cloud', 'file'];
   tabs.forEach(t => {
     const btn = document.getElementById(`tab-btn-${t}`);
     const content = document.getElementById(`tab-content-${t}`);
-    if (t === tab) {
-      btn.className = "modal-tab active-tab flex-1 py-3 text-center border-b-2 border-indigo-600 text-indigo-600 font-semibold";
-      content.classList.remove("hidden");
-    } else {
-      btn.className = "modal-tab flex-1 py-3 text-center border-b-2 border-transparent text-slate-500 hover:text-slate-800 font-semibold";
-      content.classList.add("hidden");
+    if (btn && content) {
+      if (t === tab) {
+        btn.className = "modal-tab active-tab flex-1 py-3 text-center border-b-2 border-indigo-600 text-indigo-600 font-semibold";
+        content.classList.remove("hidden");
+      } else {
+        btn.className = "modal-tab flex-1 py-3 text-center border-b-2 border-transparent text-slate-500 hover:text-slate-800 font-semibold";
+        content.classList.add("hidden");
+      }
     }
   });
 }
 
-// SALVAR NA NUVEM / ID LOCAL
+// LOCALSTORAGE PROJECT ID SAVE & LOAD
 function saveCloudById() {
   const idInput = document.getElementById("inp-cloud-id");
-  const id = idInput.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+  const id = idInput?.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
   if (!id) {
-    alert("Por favor, digite um ID para o seu projeto (ex: revisao-nathan)");
+    alert("Please enter a project ID (e.g. nathan-review-2026)");
     return;
   }
   localStorage.setItem(`prisma2020_cloud_${id}`, JSON.stringify(state));
   const msg = document.getElementById("cloud-sync-msg");
-  msg.className = "text-xs font-semibold text-emerald-600 block";
-  msg.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> Projeto salvo com sucesso com o ID: <strong>${id}</strong>!`;
-  showToast(`Projeto salvo na nuvem com o ID: ${id}`);
+  if (msg) {
+    msg.className = "text-xs font-semibold text-emerald-600 block";
+    msg.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> Project saved under ID: <strong>${id}</strong>!`;
+  }
+  showToast(`Project saved with ID: ${id}`);
 }
 
-// CARREGAR DA NUVEM / ID LOCAL
 function loadCloudById() {
   const idInput = document.getElementById("inp-cloud-id");
-  const id = idInput.value.trim().toLowerCase();
+  const id = idInput?.value.trim().toLowerCase();
   if (!id) {
-    alert("Por favor, digite o ID do projeto que deseja carregar.");
+    alert("Please enter the project ID to load.");
     return;
   }
   const saved = localStorage.getItem(`prisma2020_cloud_${id}`);
   if (saved) {
     try {
       const loaded = JSON.parse(saved);
-      Object.assign(state.options, loaded.options);
-      Object.assign(state.data, loaded.data);
+      if (loaded.options) Object.assign(state.options, loaded.options);
+      if (loaded.data) Object.assign(state.data, loaded.data);
       renderFormLists();
       syncUIFromState();
       renderDiagram();
-      showToast(`Projeto '${id}' carregado com sucesso!`);
-      document.getElementById("cloud-modal").classList.add("hidden");
+      fitToScreen();
+      showToast(`Project '${id}' loaded successfully!`);
+      document.getElementById("cloud-modal")?.classList.add("hidden");
     } catch (e) {
-      alert("Erro ao decodificar projeto.");
+      alert("Error parsing project file.");
     }
   } else {
-    alert(`Nenhum projeto encontrado com o ID '${id}'. Verifique se digitou corretamente.`);
+    alert(`No saved project found with ID '${id}'.`);
   }
 }
 
-// DOWNLOAD DO PROJETO EM FORMATO JSON
+// FILE DOWNLOAD / IMPORT (.json / .prisma / .csv)
 function downloadJsonProject() {
   const jsonStr = JSON.stringify(state, null, 2);
   const blob = new Blob([jsonStr], { type: "application/json" });
@@ -758,10 +880,9 @@ function downloadJsonProject() {
   a.download = `PRISMA2020_${new Date().toISOString().slice(0, 10)}.prisma`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast("Arquivo do projeto baixado com sucesso!");
+  showToast("Project file downloaded successfully!");
 }
 
-// PROCESSAR UPLOAD DE ARQUIVO (.JSON / .PRISMA / .CSV)
 function handleFileUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -783,34 +904,32 @@ function handleFileUpload(e) {
           syncUIFromState();
           autoSave();
           renderDiagram();
-          showToast("Projeto importado com sucesso!");
-          document.getElementById("cloud-modal").classList.add("hidden");
+          fitToScreen();
+          showToast("Project imported successfully!");
+          document.getElementById("cloud-modal")?.classList.add("hidden");
         }
       } catch (err) {
-        alert("Arquivo inválido. Certifique-se de escolher um arquivo .json ou .prisma exportado desta ferramenta.");
+        alert("Invalid file format. Please upload a .prisma or .json project file.");
       }
     };
     reader.readAsText(file);
   }
 }
 
-// PARSEADOR DE CSV COMPATÍVEL COM O PACOTE R PRISMA2020
+// CSV IMPORT / EXPORT (PRISMA2020 R Package Compatible)
 function parsePrismaCsv(csvContent) {
   const lines = csvContent.split(/\r?\n/);
   if (lines.length < 2) return;
-  
+
   lines.forEach(line => {
-    // Parse simples de linha CSV respeitando aspas
     const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
     if (parts.length >= 8) {
       const varName = parts[0].trim().replace(/^"|"$/g, '');
       const nVal = parts[7].trim().replace(/^"|"$/g, '');
-      
+
       if (varName in state.data) {
         state.data[varName] = isNaN(nVal) ? nVal : parseInt(nVal, 10);
       }
-      
-      // Parse de bases específicas se houver (Database 1, 10; Database 2, 20)
       if (varName === "database_specific_results" && nVal && nVal.includes(",")) {
         state.data.databases = parseSemicolonList(nVal);
       }
@@ -830,8 +949,9 @@ function parsePrismaCsv(csvContent) {
   syncUIFromState();
   autoSave();
   renderDiagram();
-  showToast("CSV do PRISMA importado com sucesso!");
-  document.getElementById("cloud-modal").classList.add("hidden");
+  fitToScreen();
+  showToast("PRISMA CSV imported successfully!");
+  document.getElementById("cloud-modal")?.classList.add("hidden");
 }
 
 function parseSemicolonList(str, labelKey = "name") {
@@ -848,7 +968,6 @@ function parseSemicolonList(str, labelKey = "name") {
   return result;
 }
 
-// EXPORTAÇÃO CSV COMPATÍVEL COM O R PRISMA2020
 function exportCsvFile() {
   const dbsString = state.data.databases.map(d => `${d.name}, ${d.count}`).join("; ");
   const regsString = state.data.registers.map(r => `${r.name}, ${r.count}`).join("; ");
@@ -895,17 +1014,17 @@ function exportCsvFile() {
   a.download = `PRISMA2020_${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast("CSV compatível com o PRISMA2020 exportado!");
+  showToast("PRISMA 2020 R-compatible CSV exported!");
 }
 
-// EXPORTAÇÃO EM FORMATO SVG VETORIAL
+// VECTOR SVG EXPORT
 function exportSvgFile() {
   const svgEl = document.getElementById("prisma-svg");
+  if (!svgEl) return;
   const serializer = new XMLSerializer();
   let source = serializer.serializeToString(svgEl);
 
-  // Garantir namespaces
-  if(!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)){
+  if (!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
     source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
   }
 
@@ -916,10 +1035,10 @@ function exportSvgFile() {
   a.download = `PRISMA2020_Flowchart_${new Date().toISOString().slice(0, 10)}.svg`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast("SVG Vetorial baixado com sucesso!");
+  showToast("Vector SVG downloaded successfully!");
 }
 
-// EXPORTAÇÃO EM FORMATO PNG (300 DPI / ALTA RESOLUÇÃO)
+// 300 DPI PNG EXPORT
 function exportPngFile() {
   generateCanvasBlob((blob) => {
     const url = URL.createObjectURL(blob);
@@ -928,30 +1047,31 @@ function exportPngFile() {
     a.download = `PRISMA2020_Flowchart_300DPI_${new Date().toISOString().slice(0, 10)}.png`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast("PNG em Alta Resolução baixado com sucesso!");
+    showToast("High-resolution PNG downloaded!");
   });
 }
 
-// COPIAR IMAGEM PARA ÁREA DE TRANSFERÊNCIA (CTRL + V NO WORD)
+// COPY PNG TO CLIPBOARD (Word / Google Docs Ctrl+V)
 function copyPngToClipboard() {
   generateCanvasBlob((blob) => {
     try {
       navigator.clipboard.write([
         new ClipboardItem({ 'image/png': blob })
       ]).then(() => {
-        showToast("Imagem copiada! Basta dar Ctrl + V no Word ou Docs.");
+        showToast("Image copied! Press Ctrl+V directly into Word or Docs.");
       }).catch(() => {
-        alert("Seu navegador não suporta cópia direta de imagens. Use o botão de download PNG.");
+        alert("Clipboard copy not supported in this browser. Please use the Download PNG button.");
       });
     } catch (e) {
-      alert("Seu navegador não suporta cópia direta de imagens. Use o botão de download PNG.");
+      alert("Clipboard copy not supported in this browser. Please use the Download PNG button.");
     }
   });
 }
 
-// AUXILIAR: RENDERIZAR SVG EM CANVAS COM ALTA RESOLUÇÃO (2X / 300 DPI)
 function generateCanvasBlob(callback) {
   const svgEl = document.getElementById("prisma-svg");
+  if (!svgEl) return;
+
   const serializer = new XMLSerializer();
   let svgString = serializer.serializeToString(svgEl);
 
@@ -961,7 +1081,7 @@ function generateCanvasBlob(callback) {
 
   const img = new Image();
   img.onload = () => {
-    const scale = 2.5; // Alta nitidez acadêmica
+    const scale = 2.5; // High academic resolution
     const canvas = document.createElement("canvas");
     canvas.width = img.width * scale;
     canvas.height = img.height * scale;
@@ -970,7 +1090,6 @@ function generateCanvasBlob(callback) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
-    // Fundo branco limpo
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -985,7 +1104,6 @@ function generateCanvasBlob(callback) {
   img.src = blobURL;
 }
 
-// MOSTRAR TOAST NOTIFICATION
 function showToast(message) {
   const toast = document.getElementById("toast");
   const toastText = document.getElementById("toast-text");
@@ -998,10 +1116,9 @@ function showToast(message) {
   }
 }
 
-// UTILITÁRIO: ESCAPE HTML
 function escapeHtml(text) {
   if (!text) return "";
-  return text
+  return String(text)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -1010,160 +1127,230 @@ function escapeHtml(text) {
 }
 
 // =========================================================================
-// MOTOR DE RENDERIZAÇÃO VETORIAL SVG PRISMA 2020
+// PRISMA 2020 SVG RENDERING ENGINE (EXACT MATCH TO OFFICIAL STANDARD)
 // =========================================================================
 function renderDiagram() {
   const svg = document.getElementById("prisma-svg");
   if (!svg) return;
 
-  const t = i18n[state.options.lang] || i18n.pt;
+  const lang = state.options.lang || 'en';
+  const t = i18n[lang] || i18n.en;
   const th = themes[state.options.theme] || themes.official;
 
-  // LARGURAS E ESPAÇAMENTOS DAS COLUNAS
-  const stageColWidth = 32;
-  const boxWidth = 270;
-  const branchBoxWidth = 240;
-  const colGap = 35;
-  const rowGap = 32;
+  // DIMENSIONS AND GEOMETRY
+  const stageColWidth = 26;
+  const boxW = 215; // Width of standard PRISMA boxes
+  const colGap = 32; // Gap between columns in each track
+  const trackGap = 40; // Gap between Main Track and Other Methods Track
 
-  // CÁLCULO DINÂMICO DE POSIÇÕES X DAS COLUNAS
-  let currentX = 20;
+  // COLUMN X COORDINATES
+  let curX = 20;
+  const stageX = curX;
+  curX += stageColWidth + 16;
 
-  // Coluna de Rótulos Laterais (Identificação, Triagem, Incluídos)
-  const stageX = currentX;
-  currentX += stageColWidth + 12;
-
-  // Coluna de Estudos Anteriores (se ativo)
+  // Previous Track Column (Optional)
   let prevColX = 0;
   if (state.options.previous) {
-    prevColX = currentX;
-    currentX += boxWidth + colGap;
+    prevColX = curX;
+    curX += boxW + colGap;
   }
 
-  // Coluna Central (Bases e Registros)
-  const mainColX = currentX;
-  const branchColX = mainColX + boxWidth + colGap;
-  currentX = branchColX + branchBoxWidth + colGap;
+  // Databases & Registers Track (Col 1 & Col 2)
+  const col1X = curX;
+  const col2X = col1X + boxW + colGap;
+  const mainTrackWidth = (col2X + boxW) - col1X;
+  curX = col2X + boxW;
 
-  // Coluna de Outros Métodos (se ativo)
-  let otherColX = 0;
-  let otherBranchColX = 0;
+  // Other Methods Track (Col 3 & Col 4, Optional)
+  let col3X = 0;
+  let col4X = 0;
+  let otherTrackWidth = 0;
   if (state.options.other) {
-    otherColX = currentX;
-    otherBranchColX = otherColX + boxWidth + colGap;
-    currentX = otherBranchColX + branchBoxWidth + 20;
-  } else {
-    currentX += 10;
+    curX += trackGap;
+    col3X = curX;
+    col4X = col3X + boxW + colGap;
+    otherTrackWidth = (col4X + boxW) - col3X;
+    curX = col4X + boxW;
   }
 
-  const totalWidth = Math.max(860, currentX);
+  const totalWidth = curX + 25;
 
-  // ALTURAS DINÂMICAS DAS CAIXAS
-  // 1. Identificação: Bases de dados
-  let dbLines = [`${t.databases} (n = ${state.data.database_results || 0})`];
-  if (state.options.dbDetail && state.data.databases.length > 0) {
+  // BUILD TEXT LINES FOR EACH BOX
+  // 1. Box 1: Records identified from databases & registers
+  const box1Lines = [t.rec_identified_from];
+  box1Lines.push(`${t.databases} (n = ${state.data.database_results || 0})`);
+  if (state.options.dbDetail && state.data.databases && state.data.databases.length > 0) {
     state.data.databases.forEach(db => {
-      dbLines.push(`  • ${db.name}: ${db.count}`);
+      box1Lines.push(`${db.name} (n = ${db.count})`);
     });
   }
-  if ((state.data.register_results > 0) || state.options.regDetail) {
-    dbLines.push(`${t.registers} (n = ${state.data.register_results || 0})`);
-    if (state.options.regDetail && state.data.registers.length > 0) {
-      state.data.registers.forEach(reg => {
-        dbLines.push(`  • ${reg.name}: ${reg.count}`);
-      });
-    }
+  box1Lines.push(`${t.registers} (n = ${state.data.register_results || 0})`);
+  if (state.options.regDetail && state.data.registers && state.data.registers.length > 0) {
+    state.data.registers.forEach(reg => {
+      box1Lines.push(`${reg.name} (n = ${reg.count})`);
+    });
   }
 
-  // 2. Pré-triagem: Duplicatas e inelegíveis
-  const removedLines = [
-    `${t.duplicates} (n = ${state.data.duplicates || 0})`,
-    `${t.auto_excluded} (n = ${state.data.excluded_automatic || 0})`,
-    `${t.other_removed} (n = ${state.data.excluded_other || 0})`
+  // 2. Box 2: Records removed before screening
+  const box2Lines = [
+    t.removed_before_screening,
+    `Duplicate records removed (n = ${state.data.duplicates || 0})`,
+    `Records marked as ineligible by automation`,
+    `tools (n = ${state.data.excluded_automatic || 0})`,
+    `Records removed for other reasons (n = ${state.data.excluded_other || 0})`
   ];
 
-  // 3. Elegibilidade: Motivos de exclusão
-  const dbrExLines = [];
+  // 3. Box 3: Records screened
+  const box3Lines = [
+    t.records_screened,
+    `(n = ${state.data.records_screened || 0})`
+  ];
+
+  // 4. Box 4: Records excluded
+  const box4Lines = [
+    t.records_excluded,
+    `(n = ${state.data.records_excluded || 0})`
+  ];
+
+  // 5. Box 5: Reports sought for retrieval (Main track)
+  const box5Lines = [
+    t.reports_sought,
+    `(n = ${state.data.dbr_sought_reports || 0})`
+  ];
+
+  // 6. Box 6: Reports not retrieved (Main track)
+  const box6Lines = [
+    t.reports_not_retrieved,
+    `(n = ${state.data.dbr_notretrieved_reports || 0})`
+  ];
+
+  // 7. Box 7: Reports assessed for eligibility (Main track)
+  const box7Lines = [
+    t.reports_assessed,
+    `(n = ${state.data.dbr_assessed || 0})`
+  ];
+
+  // 8. Box 8: Reports excluded reasons (Main track)
+  const box8Lines = [t.reports_excluded];
   if (state.data.dbr_reasons && state.data.dbr_reasons.length > 0) {
     state.data.dbr_reasons.forEach(r => {
-      dbrExLines.push(`• ${r.reason} (n = ${r.count})`);
+      box8Lines.push(`${r.reason} (n = ${r.count})`);
     });
   } else {
-    dbrExLines.push(`• Motivo 1 (n = 0)`);
+    box8Lines.push(`Reason 1 (n = 0)`);
   }
 
-  // 4. Outros Métodos: Motivos de exclusão
-  const otherExLines = [];
-  if (state.data.other_reasons && state.data.other_reasons.length > 0) {
-    state.data.other_reasons.forEach(r => {
-      otherExLines.push(`• ${r.reason} (n = ${r.count})`);
-    });
-  } else {
-    otherExLines.push(`• Motivo 1 (n = 0)`);
-  }
-
-  // COORDENADAS Y DINÂMICAS POR FASES
-  let yCursor = 30;
-
-  // FASE 0: CABEÇALHOS SUPERIORES
-  const headerHeight = 44;
-  const headerY = yCursor;
-  yCursor += headerHeight + 15;
-
-  // FASE 1: IDENTIFICAÇÃO (Bases & Outras fontes)
-  const identY = yCursor;
-  const identHeight = Math.max(75, 45 + dbLines.length * 15);
-  yCursor += identHeight + rowGap;
-
-  // FASE 2: REMOVIDOS ANTES DA TRIAGEM & TRIAGEM DE REGISTROS
-  const removedBoxHeight = 45 + removedLines.length * 15;
-  const screenedBoxHeight = 55;
-  const screenPhaseHeight = Math.max(removedBoxHeight, screenedBoxHeight);
-  const screenY = yCursor;
-  yCursor += screenPhaseHeight + rowGap;
-
-  // FASE 3: RELATÓRIOS BUSCADOS & NÃO RECUPERADOS
-  const soughtY = yCursor;
-  const soughtHeight = 55;
-  const notRetrievedHeight = 55;
-  yCursor += soughtHeight + rowGap;
-
-  // FASE 4: RELATÓRIOS AVALIADOS & MOTIVOS DE EXCLUSÃO
-  const assessedY = yCursor;
-  const assessedHeight = 55;
-  const dbrExHeight = 35 + dbrExLines.length * 16;
-  const otherExHeight = 35 + otherExLines.length * 16;
-  const assessedPhaseHeight = Math.max(assessedHeight, dbrExHeight, otherExHeight);
-  yCursor += assessedPhaseHeight + rowGap;
-
-  // FASE 5: ESTUDOS INCLUÍDOS
-  const includedY = yCursor;
-  let incLines = [
-    `${t.new_studies_inc} (n = ${state.data.new_studies || 0})`,
-    `${t.new_reports_inc} (n = ${state.data.new_reports || 0})`
+  // 9. Box 9: New studies included in review
+  const box9Lines = [
+    t.new_studies_inc,
+    `(n = ${state.data.new_studies || 0})`,
+    t.new_reports_inc,
+    `(n = ${state.data.new_reports || 0})`
   ];
   if (state.options.previous) {
-    incLines.push(
-      `${t.total_studies_inc} (n = ${state.data.total_studies || 0})`,
-      `${t.total_reports_inc} (n = ${state.data.total_reports || 0})`
+    box9Lines.push(
+      t.total_studies_inc,
+      `(n = ${state.data.total_studies || 0})`,
+      t.total_reports_inc,
+      `(n = ${state.data.total_reports || 0})`
     );
   }
-  const incHeight = 35 + incLines.length * 16;
-  yCursor += incHeight;
 
-  // FASE 6: METANÁLISE (OPCIONAL)
-  let metaHeight = 0;
-  let metaY = 0;
-  if (state.options.metaAnalysis) {
-    yCursor += 25;
-    metaY = yCursor;
-    metaHeight = 65;
-    yCursor += metaHeight;
+  // 10. Box 10: Records identified from other sources
+  const box10Lines = [
+    t.rec_identified_from,
+    `${t.websites} (n = ${state.data.website_results || 0})`,
+    `${t.organisations} (n = ${state.data.organisation_results || 0})`,
+    `${t.citations} (n = ${state.data.citations_results || 0})`
+  ];
+
+  // 11. Box 11: Reports sought for retrieval (Other track)
+  const box11Lines = [
+    t.reports_sought,
+    `(n = ${state.data.other_sought_reports || 0})`
+  ];
+
+  // 12. Box 12: Reports not retrieved (Other track)
+  const box12Lines = [
+    t.reports_not_retrieved,
+    `(n = ${state.data.other_notretrieved_reports || 0})`
+  ];
+
+  // 13. Box 13: Reports assessed for eligibility (Other track)
+  const box13Lines = [
+    t.reports_assessed,
+    `(n = ${state.data.other_assessed || 0})`
+  ];
+
+  // 14. Box 14: Reports excluded reasons (Other track)
+  const box14Lines = [t.reports_excluded];
+  if (state.data.other_reasons && state.data.other_reasons.length > 0) {
+    state.data.other_reasons.forEach(r => {
+      box14Lines.push(`${r.reason} (n = ${r.count})`);
+    });
+  } else {
+    box14Lines.push(`Reason 1 (n = 0)`);
   }
 
-  const totalHeight = yCursor + 40;
+  // HELPER: CALCULATE BOX HEIGHT FROM LINE COUNT
+  const lineHeight = 13.5;
+  const paddingY = 16;
+  function calcBoxHeight(lines) {
+    return Math.max(38, Math.round(lines.length * lineHeight + paddingY));
+  }
 
-  // ATUALIZAR DIMENSÕES DO SVG E DA INTERFACE
+  // ROW HEIGHTS (NO OVERLAP GRID)
+  const headerHeight = 28;
+  const rowGap = 32;
+
+  // ROW 1: HEADERS
+  const r1Y = 22;
+
+  // ROW 2: IDENTIFICATION
+  const r2Y = r1Y + headerHeight + 20;
+  const hBox1 = calcBoxHeight(box1Lines);
+  const hBox2 = calcBoxHeight(box2Lines);
+  const hBox10 = state.options.other ? calcBoxHeight(box10Lines) : 0;
+  const r2Height = Math.max(hBox1, hBox2, hBox10);
+
+  // ROW 3: SCREENING
+  const r3Y = r2Y + r2Height + rowGap;
+  const hBox3 = calcBoxHeight(box3Lines);
+  const hBox4 = calcBoxHeight(box4Lines);
+  const r3Height = Math.max(hBox3, hBox4);
+
+  // ROW 4: SOUGHT / RETRIEVAL
+  const r4Y = r3Y + r3Height + rowGap;
+  const hBox5 = calcBoxHeight(box5Lines);
+  const hBox6 = calcBoxHeight(box6Lines);
+  const hBox11 = state.options.other ? calcBoxHeight(box11Lines) : 0;
+  const hBox12 = state.options.other ? calcBoxHeight(box12Lines) : 0;
+  const r4Height = Math.max(hBox5, hBox6, hBox11, hBox12);
+
+  // ROW 5: ASSESSED / ELIGIBILITY
+  const r5Y = r4Y + r4Height + rowGap;
+  const hBox7 = calcBoxHeight(box7Lines);
+  const hBox8 = calcBoxHeight(box8Lines);
+  const hBox13 = state.options.other ? calcBoxHeight(box13Lines) : 0;
+  const hBox14 = state.options.other ? calcBoxHeight(box14Lines) : 0;
+  const r5Height = Math.max(hBox7, hBox8, hBox13, hBox14);
+
+  // ROW 6: INCLUDED
+  const r6Y = r5Y + r5Height + 36;
+  const hBox9 = calcBoxHeight(box9Lines);
+  const r6Height = hBox9;
+
+  // ROW 7: META-ANALYSIS (OPTIONAL)
+  let r7Y = 0;
+  let r7Height = 0;
+  if (state.options.metaAnalysis) {
+    r7Y = r6Y + r6Height + 28;
+    r7Height = 48;
+  }
+
+  const totalHeight = (state.options.metaAnalysis ? r7Y + r7Height : r6Y + r6Height) + 30;
+
+  // UPDATE SVG CANVAS SIZE
   svg.setAttribute("width", totalWidth);
   svg.setAttribute("height", totalHeight);
   svg.setAttribute("viewBox", `0 0 ${totalWidth} ${totalHeight}`);
@@ -1173,264 +1360,255 @@ function renderDiagram() {
     dimEl.textContent = `${totalWidth} × ${totalHeight} px`;
   }
 
-  // MONTAGEM DO CONTEÚDO SVG
-  let elements = [];
+  // ASSEMBLE SVG ELEMENTS
+  const el = [];
 
-  // 1. Definições de Marcadores (Setas)
-  elements.push(`
+  // Arrow marker definition (clean black triangle)
+  el.push(`
     <defs>
-      <marker id="arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <marker id="arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
         <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="${th.arrowColor}" />
       </marker>
     </defs>
   `);
 
-  // 2. Rótulos das Etapas Laterais (Identificação, Triagem, Incluídos)
-  const stageIdentHeight = (screenY - headerY) - 10;
-  const stageScreenHeight = (includedY - screenY) - 10;
-  const stageIncHeight = (totalHeight - includedY) - 30;
+  // 1. LEFT STAGE BADGES (Pill shaped, soft blue #adcbf0, vertical text rotated -90)
+  // Badge 1: Identification (covers Row 2)
+  el.push(drawStagePill(stageX, r2Y, stageColWidth, r2Height, t.stage_ident, th));
 
-  elements.push(drawStageBadge(stageX, headerY, stageColWidth, stageIdentHeight, t.stage_ident, th));
-  elements.push(drawStageBadge(stageX, screenY, stageColWidth, stageScreenHeight, t.stage_screen, th));
-  elements.push(drawStageBadge(stageX, includedY, stageColWidth, stageIncHeight, t.stage_inc, th));
+  // Badge 2: Screening (covers Row 3 to Row 5)
+  const screeningTotalHeight = (r5Y + r5Height) - r3Y;
+  el.push(drawStagePill(stageX, r3Y, stageColWidth, screeningTotalHeight, t.stage_screen, th));
 
-  // 3. Estudos Anteriores (se ativo)
+  // Badge 3: Included (covers Row 6)
+  const includedTotalHeight = (state.options.metaAnalysis ? (r7Y + r7Height) - r6Y : r6Height);
+  el.push(drawStagePill(stageX, r6Y, stageColWidth, includedTotalHeight, t.stage_inc, th));
+
+  // 2. PREVIOUS STUDIES TRACK (OPTIONAL)
   if (state.options.previous) {
-    // Cabeçalho de Estudos Anteriores
-    elements.push(drawHeaderBox(prevColX, headerY, boxWidth, headerHeight, t.header_prev, th.headerPrevBg, th.headerPrevText));
+    // Header
+    el.push(drawHeaderPill(prevColX, r1Y, boxW, headerHeight, t.header_prev, th.headerPrevBg, th.headerPrevText));
+    el.push(drawArrow(prevColX + boxW / 2, r1Y + headerHeight, prevColX + boxW / 2, r2Y, th.arrowColor));
 
-    // Caixa de Estudos Anteriores
+    // Box
     const prevLines = [
-      `${t.prev_studies_inc} (n = ${state.data.previous_studies || 0})`,
-      `${t.prev_reports_inc} (n = ${state.data.previous_reports || 0})`
+      t.prev_studies_inc,
+      `(n = ${state.data.previous_studies || 0})`,
+      t.prev_reports_inc,
+      `(n = ${state.data.previous_reports || 0})`
     ];
-    const prevBoxHeight = 70;
-    elements.push(drawBox(prevColX, identY, boxWidth, prevBoxHeight, prevLines, th));
+    const prevH = calcBoxHeight(prevLines);
+    el.push(drawBoxWhite(prevColX, r2Y, boxW, prevH, prevLines, th));
 
-    // Conector do cabeçalho para a caixa
-    elements.push(drawArrow(prevColX + boxWidth / 2, headerY + headerHeight, prevColX + boxWidth / 2, identY, th.arrowColor));
-
-    // Conector longo lateral em cotovelo de Estudos Anteriores até a caixa de Estudos Incluídos
-    const prevBottomY = identY + prevBoxHeight;
-    const incTargetY = includedY + incHeight / 2;
-    elements.push(`
-      <path d="M ${prevColX + boxWidth / 2} ${prevBottomY} L ${prevColX + boxWidth / 2} ${incTargetY} L ${mainColX} ${incTargetY}" fill="none" stroke="${th.arrowColor}" stroke-width="1.6" marker-end="url(#arrow)" />
+    // Arrow from Previous box down and into Included Box
+    const prevTargetY = r6Y + hBox9 / 2;
+    el.push(`
+      <path d="M ${prevColX + boxW / 2} ${r2Y + prevH} L ${prevColX + boxW / 2} ${prevTargetY} L ${col1X} ${prevTargetY}" fill="none" stroke="${th.arrowColor}" stroke-width="1.2" marker-end="url(#arrow)" />
     `);
   }
 
-  // 4. COLUNA CENTRAL (BASES DE DADOS E REGISTROS)
-  // Cabeçalho Amarelo / Goldenrod (ou cor do tema)
-  const topHeaderWidth = boxWidth + branchBoxWidth + colGap;
-  elements.push(drawHeaderBox(mainColX, headerY, topHeaderWidth, headerHeight, t.header_db, th.headerDbBg, th.headerDbText));
+  // 3. TOP HEADERS
+  // Header 1: Databases & Registers (Amber/Goldenrod pill spanning Col 1 and Col 2)
+  el.push(drawHeaderPill(col1X, r1Y, mainTrackWidth, headerHeight, t.header_db, th.headerDbBg, th.headerDbText));
 
-  // Conector vertical do cabeçalho para a Caixa 1
-  elements.push(drawArrow(mainColX + boxWidth / 2, headerY + headerHeight, mainColX + boxWidth / 2, identY, th.arrowColor));
+  // Header 2: Other Methods (Grey pill spanning Col 3 and Col 4)
+  if (state.options.other) {
+    el.push(drawHeaderPill(col3X, r1Y, otherTrackWidth, headerHeight, t.header_other, th.headerOtherBg, th.headerOtherText));
+  }
 
-  // Caixa 1: Registros Identificados em Bases e Registros
-  elements.push(drawBoxWithHeader(mainColX, identY, boxWidth, identHeight, t.rec_identified_from, dbLines, th));
+  // 4. ROW 2: IDENTIFICATION
+  // Box 1 (Col 1): Records identified from Databases & Registers
+  el.push(drawBoxWhite(col1X, r2Y, boxW, hBox1, box1Lines, th));
 
-  // Ramificação Direita: Registros Removidos antes da Triagem
-  elements.push(drawBoxWithHeader(branchColX, screenY, branchBoxWidth, removedBoxHeight, t.removed_before_screening, removedLines, th));
+  // Horizontal Arrow: Box 1 -> Box 2
+  const r2MidY = r2Y + hBox1 / 2;
+  el.push(drawArrow(col1X + boxW, r2MidY, col2X, r2MidY, th.arrowColor));
 
-  // Conector em Cotovelo para a caixa de Removidos antes da Triagem
-  const identMidBottomY = identY + identHeight;
-  const branchMidY = screenY + removedBoxHeight / 2;
-  elements.push(`
-    <path d="M ${mainColX + boxWidth / 2} ${identMidBottomY} L ${mainColX + boxWidth / 2} ${branchMidY} L ${branchColX} ${branchMidY}" fill="none" stroke="${th.arrowColor}" stroke-width="1.6" marker-end="url(#arrow)" />
-  `);
+  // Box 2 (Col 2): Records removed before screening
+  el.push(drawBoxWhite(col2X, r2Y, boxW, hBox2, box2Lines, th));
 
-  // Caixa 2: Registros Triados (Screened)
-  const screenedLines = [`(n = ${state.data.records_screened || 0})`];
-  elements.push(drawBoxWithHeader(mainColX, screenY, boxWidth, screenedBoxHeight, t.records_screened, screenedLines, th));
+  // Box 10 (Col 3, Other Track): Records identified from other sources
+  if (state.options.other) {
+    el.push(drawBoxGrey(col3X, r2Y, boxW, hBox10, box10Lines, th));
+  }
 
-  // Seta de Identificação descendo para Registros Triados
-  elements.push(drawArrow(mainColX + boxWidth / 2, identMidBottomY, mainColX + boxWidth / 2, screenY, th.arrowColor));
+  // 5. ROW 3: SCREENING
+  // Vertical Arrow: Box 1 -> Box 3
+  el.push(drawArrow(col1X + boxW / 2, r2Y + hBox1, col1X + boxW / 2, r3Y, th.arrowColor));
 
-  // Ramificação Direita: Registros Excluídos
-  const recExcludedLines = [`(n = ${state.data.records_excluded || 0})`];
-  const recExcludedHeight = 55;
-  elements.push(drawBoxWithHeader(branchColX, screenY + removedBoxHeight + 15, branchBoxWidth, recExcludedHeight, t.records_excluded, recExcludedLines, th));
+  // Box 3 (Col 1): Records screened
+  el.push(drawBoxWhite(col1X, r3Y, boxW, hBox3, box3Lines, th));
 
-  // Seta descendo para Reports Sought + Seta para Records Excluded
-  const screenBottomY = screenY + screenedBoxHeight;
-  const recExMidY = screenY + removedBoxHeight + 15 + recExcludedHeight / 2;
-  elements.push(`
-    <path d="M ${mainColX + boxWidth / 2} ${screenBottomY} L ${mainColX + boxWidth / 2} ${recExMidY} L ${branchColX} ${recExMidY}" fill="none" stroke="${th.arrowColor}" stroke-width="1.6" marker-end="url(#arrow)" />
-  `);
+  // Horizontal Arrow: Box 3 -> Box 4
+  const r3MidY = r3Y + hBox3 / 2;
+  el.push(drawArrow(col1X + boxW, r3MidY, col2X, r3MidY, th.arrowColor));
 
-  // Caixa 3: Relatórios Buscados para Recuperação (Sought)
-  const soughtLines = [`(n = ${state.data.dbr_sought_reports || 0})`];
-  elements.push(drawBoxWithHeader(mainColX, soughtY, boxWidth, soughtHeight, t.reports_sought, soughtLines, th));
-  elements.push(drawArrow(mainColX + boxWidth / 2, screenBottomY, mainColX + boxWidth / 2, soughtY, th.arrowColor));
+  // Box 4 (Col 2): Records excluded
+  el.push(drawBoxWhite(col2X, r3Y, boxW, hBox4, box4Lines, th));
 
-  // Ramificação Direita: Relatórios Não Recuperados
-  const notRetrievedLines = [`(n = ${state.data.dbr_notretrieved_reports || 0})`];
-  elements.push(drawBoxWithHeader(branchColX, soughtY, branchBoxWidth, notRetrievedHeight, t.reports_not_retrieved, notRetrievedLines, th));
+  // In Other Track: Arrow straight down from Box 10 past Row 3 down to Box 11 in Row 4!
+  if (state.options.other) {
+    el.push(drawArrow(col3X + boxW / 2, r2Y + hBox10, col3X + boxW / 2, r4Y, th.arrowColor));
+  }
 
-  // Seta em cotovelo para Relatórios Não Recuperados
-  const soughtBottomY = soughtY + soughtHeight;
-  const notRetrievedMidY = soughtY + notRetrievedHeight / 2;
-  elements.push(`
-    <path d="M ${mainColX + boxWidth / 2} ${soughtBottomY} L ${mainColX + boxWidth / 2} ${notRetrievedMidY} L ${branchColX} ${notRetrievedMidY}" fill="none" stroke="${th.arrowColor}" stroke-width="1.6" marker-end="url(#arrow)" />
-  `);
+  // 6. ROW 4: RETRIEVAL / SOUGHT
+  // Vertical Arrow: Box 3 -> Box 5
+  el.push(drawArrow(col1X + boxW / 2, r3Y + hBox3, col1X + boxW / 2, r4Y, th.arrowColor));
 
-  // Caixa 4: Relatórios Avaliados para Elegibilidade (Assessed)
-  const assessedLines = [`(n = ${state.data.dbr_assessed || 0})`];
-  elements.push(drawBoxWithHeader(mainColX, assessedY, boxWidth, assessedHeight, t.reports_assessed, assessedLines, th));
-  elements.push(drawArrow(mainColX + boxWidth / 2, soughtBottomY, mainColX + boxWidth / 2, assessedY, th.arrowColor));
+  // Box 5 (Col 1): Reports sought for retrieval
+  el.push(drawBoxWhite(col1X, r4Y, boxW, hBox5, box5Lines, th));
 
-  // Ramificação Direita: Relatórios Excluídos com Motivos Detalhados
-  elements.push(drawBoxWithHeader(branchColX, assessedY, branchBoxWidth, dbrExHeight, t.reports_excluded, dbrExLines, th));
+  // Horizontal Arrow: Box 5 -> Box 6
+  const r4MidY = r4Y + hBox5 / 2;
+  el.push(drawArrow(col1X + boxW, r4MidY, col2X, r4MidY, th.arrowColor));
 
-  // Seta em cotovelo para Relatórios Excluídos com Motivos
-  const assessedBottomY = assessedY + assessedHeight;
-  const dbrExMidY = assessedY + Math.min(45, dbrExHeight / 2);
-  elements.push(`
-    <path d="M ${mainColX + boxWidth / 2} ${assessedBottomY} L ${mainColX + boxWidth / 2} ${dbrExMidY} L ${branchColX} ${dbrExMidY}" fill="none" stroke="${th.arrowColor}" stroke-width="1.6" marker-end="url(#arrow)" />
-  `);
+  // Box 6 (Col 2): Reports not retrieved
+  el.push(drawBoxWhite(col2X, r4Y, boxW, hBox6, box6Lines, th));
 
-  // Caixa 5: Estudos Incluídos (Included)
-  elements.push(drawBox(mainColX, includedY, boxWidth, incHeight, incLines, th, true));
-  elements.push(drawArrow(mainColX + boxWidth / 2, assessedBottomY, mainColX + boxWidth / 2, includedY, th.arrowColor));
+  // Other Track Row 4
+  if (state.options.other) {
+    // Box 11 (Col 3): Reports sought for retrieval
+    el.push(drawBoxGrey(col3X, r4Y, boxW, hBox11, box11Lines, th));
 
-  // Caixa 6: Metanálise (Opcional)
+    // Horizontal Arrow: Box 11 -> Box 12
+    const r4OtherMidY = r4Y + hBox11 / 2;
+    el.push(drawArrow(col3X + boxW, r4OtherMidY, col4X, r4OtherMidY, th.arrowColor));
+
+    // Box 12 (Col 4): Reports not retrieved
+    el.push(drawBoxGrey(col4X, r4Y, boxW, hBox12, box12Lines, th));
+  }
+
+  // 7. ROW 5: ASSESSED / ELIGIBILITY
+  // Vertical Arrow: Box 5 -> Box 7
+  el.push(drawArrow(col1X + boxW / 2, r4Y + hBox5, col1X + boxW / 2, r5Y, th.arrowColor));
+
+  // Box 7 (Col 1): Reports assessed for eligibility
+  el.push(drawBoxWhite(col1X, r5Y, boxW, hBox7, box7Lines, th));
+
+  // Horizontal Arrow: Box 7 -> Box 8
+  const r5MidY = r5Y + hBox7 / 2;
+  el.push(drawArrow(col1X + boxW, r5MidY, col2X, r5MidY, th.arrowColor));
+
+  // Box 8 (Col 2): Reports excluded with reasons
+  el.push(drawBoxWhite(col2X, r5Y, boxW, hBox8, box8Lines, th));
+
+  // Other Track Row 5
+  if (state.options.other) {
+    // Vertical Arrow: Box 11 -> Box 13
+    el.push(drawArrow(col3X + boxW / 2, r4Y + hBox11, col3X + boxW / 2, r5Y, th.arrowColor));
+
+    // Box 13 (Col 3): Reports assessed for eligibility
+    el.push(drawBoxGrey(col3X, r5Y, boxW, hBox13, box13Lines, th));
+
+    // Horizontal Arrow: Box 13 -> Box 14
+    const r5OtherMidY = r5Y + hBox13 / 2;
+    el.push(drawArrow(col3X + boxW, r5OtherMidY, col4X, r5OtherMidY, th.arrowColor));
+
+    // Box 14 (Col 4): Reports excluded with reasons
+    el.push(drawBoxGrey(col4X, r5Y, boxW, hBox14, box14Lines, th));
+  }
+
+  // 8. ROW 6: INCLUDED
+  // Vertical Arrow: Box 7 -> Box 9
+  el.push(drawArrow(col1X + boxW / 2, r5Y + hBox7, col1X + boxW / 2, r6Y, th.arrowColor));
+
+  // Box 9 (Col 1): New studies included in review
+  el.push(drawBoxWhite(col1X, r6Y, boxW, hBox9, box9Lines, th));
+
+  // Elbow Arrow from Box 13 (Other Track) to right edge of Box 9
+  if (state.options.other) {
+    const elbowStartX = col3X + boxW / 2;
+    const elbowStartY = r5Y + hBox13;
+    const elbowTargetX = col1X + boxW;
+    const elbowTargetY = r6Y + hBox9 / 2;
+
+    el.push(`
+      <path d="M ${elbowStartX} ${elbowStartY} L ${elbowStartX} ${elbowTargetY} L ${elbowTargetX} ${elbowTargetY}" fill="none" stroke="${th.arrowColor}" stroke-width="1.2" marker-end="url(#arrow)" />
+    `);
+  }
+
+  // 9. ROW 7: META-ANALYSIS (OPTIONAL)
   if (state.options.metaAnalysis) {
     const metaLines = [
-      `${t.ma_studies_inc} (n = ${state.data.total_studies_ma || 0})`,
-      `${t.ma_reports_inc} (n = ${state.data.total_reports_ma || 0})`
+      t.ma_studies_inc,
+      `(n = ${state.data.total_studies_ma || 0})`,
+      t.ma_reports_inc,
+      `(n = ${state.data.total_reports_ma || 0})`
     ];
-    elements.push(drawBox(mainColX, metaY, boxWidth, metaHeight, metaLines, th));
-    elements.push(drawArrow(mainColX + boxWidth / 2, includedY + incHeight, mainColX + boxWidth / 2, metaY, th.arrowColor));
+    el.push(drawArrow(col1X + boxW / 2, r6Y + hBox9, col1X + boxW / 2, r7Y, th.arrowColor));
+    el.push(drawBoxWhite(col1X, r7Y, boxW, r7Height, metaLines, th));
   }
 
-  // 5. COLUNA DE OUTROS MÉTODOS (SE ATIVO)
-  if (state.options.other) {
-    const topOtherWidth = boxWidth + branchBoxWidth + colGap;
-    // Cabeçalho de Outros Métodos
-    elements.push(drawHeaderBox(otherColX, headerY, topOtherWidth, headerHeight, t.header_other, th.headerOtherBg, th.headerOtherText));
-    elements.push(drawArrow(otherColX + boxWidth / 2, headerY + headerHeight, otherColX + boxWidth / 2, identY, th.arrowColor));
-
-    // Caixa A: Registros Identificados em Outras Fontes
-    const otherLines = [
-      `${t.websites} (n = ${state.data.website_results || 0})`,
-      `${t.organisations} (n = ${state.data.organisation_results || 0})`,
-      `${t.citations} (n = ${state.data.citations_results || 0})`
-    ];
-    elements.push(drawBoxWithHeader(otherColX, identY, boxWidth, identHeight, t.rec_identified_from, otherLines, th));
-
-    // Caixa B: Relatórios Buscados em Outras Fontes
-    const otherSoughtLines = [`(n = ${state.data.other_sought_reports || 0})`];
-    elements.push(drawBoxWithHeader(otherColX, soughtY, boxWidth, soughtHeight, t.reports_sought, otherSoughtLines, th));
-    elements.push(drawArrow(otherColX + boxWidth / 2, identY + identHeight, otherColX + boxWidth / 2, soughtY, th.arrowColor));
-
-    // Ramificação Direita: Não recuperados de Outras Fontes
-    const otherNotRetrievedLines = [`(n = ${state.data.other_notretrieved_reports || 0})`];
-    elements.push(drawBoxWithHeader(otherBranchColX, soughtY, branchBoxWidth, notRetrievedHeight, t.reports_not_retrieved, otherNotRetrievedLines, th));
-
-    const otherSoughtBottomY = soughtY + soughtHeight;
-    const otherNotRetrievedMidY = soughtY + notRetrievedHeight / 2;
-    elements.push(`
-      <path d="M ${otherColX + boxWidth / 2} ${otherSoughtBottomY} L ${otherColX + boxWidth / 2} ${otherNotRetrievedMidY} L ${otherBranchColX} ${otherNotRetrievedMidY}" fill="none" stroke="${th.arrowColor}" stroke-width="1.6" marker-end="url(#arrow)" />
-    `);
-
-    // Caixa C: Relatórios Avaliados de Outras Fontes
-    const otherAssessedLines = [`(n = ${state.data.other_assessed || 0})`];
-    elements.push(drawBoxWithHeader(otherColX, assessedY, boxWidth, assessedHeight, t.reports_assessed, otherAssessedLines, th));
-    elements.push(drawArrow(otherColX + boxWidth / 2, otherSoughtBottomY, otherColX + boxWidth / 2, assessedY, th.arrowColor));
-
-    // Ramificação Direita: Motivos de Exclusão de Outras Fontes
-    elements.push(drawBoxWithHeader(otherBranchColX, assessedY, branchBoxWidth, otherExHeight, t.reports_excluded, otherExLines, th));
-
-    const otherAssessedBottomY = assessedY + assessedHeight;
-    const otherExMidY = assessedY + Math.min(45, otherExHeight / 2);
-    elements.push(`
-      <path d="M ${otherColX + boxWidth / 2} ${otherAssessedBottomY} L ${otherColX + boxWidth / 2} ${otherExMidY} L ${otherBranchColX} ${otherExMidY}" fill="none" stroke="${th.arrowColor}" stroke-width="1.6" marker-end="url(#arrow)" />
-    `);
-
-    // Conector de Outros Métodos até a Caixa Central de Estudos Incluídos
-    const otherTargetY = includedY + incHeight / 2;
-    elements.push(`
-      <path d="M ${otherColX + boxWidth / 2} ${otherAssessedBottomY} L ${otherColX + boxWidth / 2} ${otherTargetY} L ${mainColX + boxWidth} ${otherTargetY}" fill="none" stroke="${th.arrowColor}" stroke-width="1.6" marker-end="url(#arrow)" />
-    `);
-  }
-
-  svg.innerHTML = elements.join("\n");
+  svg.innerHTML = el.join("\n");
 }
 
-// AUXILIARES DE DESENHO SVG
-function drawHeaderBox(x, y, w, h, text, bg, color) {
+// =========================================================================
+// SVG DRAWING UTILITIES
+// =========================================================================
+
+// Top Rounded Pill Headers
+function drawHeaderPill(x, y, w, h, text, bg, color) {
   return `
-    <g class="header-box">
-      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="${bg}" stroke="#334155" stroke-width="1.2" />
-      <text x="${x + w / 2}" y="${y + h / 2 + 4}" fill="${color}" font-size="12" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">
+    <g class="header-pill">
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="9" fill="${bg}" stroke="none" />
+      <text x="${x + w / 2}" y="${y + h / 2 + 3.5}" fill="${color}" font-size="10.5" font-weight="700" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Arial, sans-serif">
         ${escapeHtml(text)}
       </text>
     </g>
   `;
 }
 
-function drawBoxWithHeader(x, y, w, h, headerText, lines, th) {
-  let textElements = [];
-  const startY = y + 20;
-
-  // Título da Caixa (em negrito)
-  textElements.push(`
-    <text x="${x + 12}" y="${startY}" fill="${th.textColor}" font-size="11.5" font-weight="700" font-family="system-ui, -apple-system, sans-serif">
-      ${escapeHtml(headerText)}
-    </text>
-  `);
-
-  // Linhas de Conteúdo
-  lines.forEach((line, i) => {
-    textElements.push(`
-      <text x="${x + 12}" y="${startY + 18 + i * 16}" fill="${th.subtextColor}" font-size="11" font-weight="500" font-family="system-ui, -apple-system, sans-serif">
-        ${escapeHtml(line)}
-      </text>
-    `);
-  });
-
+// Side Stage Badge Pills (Soft Blue #adcbf0, Vertical Text)
+function drawStagePill(x, y, w, h, label, th) {
+  const centerX = x + w / 2;
+  const centerY = y + h / 2;
   return `
-    <g class="prisma-box">
-      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="${th.boxBg}" stroke="${th.boxBorder}" stroke-width="1.3" />
-      ${textElements.join("\n")}
-    </g>
-  `;
-}
-
-function drawBox(x, y, w, h, lines, th, isHighlight = false) {
-  let textElements = [];
-  const startY = y + 22;
-
-  lines.forEach((line, i) => {
-    const isMain = isHighlight || i === 0;
-    textElements.push(`
-      <text x="${x + w / 2}" y="${startY + i * 18}" fill="${th.textColor}" font-size="11.5" font-weight="${isMain ? '700' : '500'}" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">
-        ${escapeHtml(line)}
-      </text>
-    `);
-  });
-
-  return `
-    <g class="prisma-box">
-      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="${th.boxBg}" stroke="${th.boxBorder}" stroke-width="${isHighlight ? '1.8' : '1.3'}" />
-      ${textElements.join("\n")}
-    </g>
-  `;
-}
-
-function drawStageBadge(x, y, w, h, label, th) {
-  return `
-    <g class="stage-badge">
-      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="${th.stageBadgeBg}" />
-      <text x="${x + w / 2 + 4}" y="${y + h / 2}" fill="${th.stageBadgeText}" font-size="11" font-weight="800" text-anchor="middle" letter-spacing="2" transform="rotate(-90 ${x + w / 2} ${y + h / 2})" font-family="system-ui, -apple-system, sans-serif">
+    <g class="stage-pill">
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="${th.stageBadgeBg}" stroke="none" />
+      <text x="${centerX}" y="${centerY + 3}" fill="${th.stageBadgeText}" font-size="11" font-weight="600" text-anchor="middle" transform="rotate(-90 ${centerX} ${centerY})" font-family="-apple-system, BlinkMacSystemFont, Arial, sans-serif">
         ${escapeHtml(label)}
       </text>
     </g>
   `;
 }
 
+// Databases & Registers Track Box (White fill, 1px Black Border, Centered Text)
+function drawBoxWhite(x, y, w, h, lines, th) {
+  const lineHeight = 13.5;
+  const startY = y + (h - (lines.length - 1) * lineHeight) / 2 + 3.5;
+
+  const textTags = lines.map((line, i) => {
+    return `<text x="${x + w / 2}" y="${startY + i * lineHeight}" fill="${th.textColor}" font-size="10" font-weight="400" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Arial, sans-serif">${escapeHtml(line)}</text>`;
+  }).join("\n");
+
+  return `
+    <g class="prisma-box-main">
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${th.mainBoxBg}" stroke="${th.mainBoxBorder}" stroke-width="1.0" rx="0" />
+      ${textTags}
+    </g>
+  `;
+}
+
+// Other Methods Track Box (Solid Light Grey #dcdcdc fill, NO border, Centered Text)
+function drawBoxGrey(x, y, w, h, lines, th) {
+  const lineHeight = 13.5;
+  const startY = y + (h - (lines.length - 1) * lineHeight) / 2 + 3.5;
+
+  const textTags = lines.map((line, i) => {
+    return `<text x="${x + w / 2}" y="${startY + i * lineHeight}" fill="${th.textColor}" font-size="10" font-weight="400" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Arial, sans-serif">${escapeHtml(line)}</text>`;
+  }).join("\n");
+
+  return `
+    <g class="prisma-box-other">
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${th.otherBoxBg}" stroke="none" rx="0" />
+      ${textTags}
+    </g>
+  `;
+}
+
+// Straight Line Arrow with Marker
 function drawArrow(x1, y1, x2, y2, color) {
   return `
-    <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="1.6" marker-end="url(#arrow)" />
+    <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="1.2" marker-end="url(#arrow)" />
   `;
 }

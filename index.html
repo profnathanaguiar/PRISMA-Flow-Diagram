@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PRISMA 2020 Flowchart Generator | Nathan</title>
+  <title>PRISMA 2020 Flowchart Generator</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Font Awesome Icons -->
@@ -27,7 +27,7 @@
             PRISMA 2020 Flowchart
             <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200">v2.0 Web</span>
           </h1>
-          <p class="text-xs text-slate-500">Fluxograma para Revisões Sistemáticas • Edição Dinâmica & Nuvem</p>
+          <p class="text-xs text-slate-500">Systematic Reviews Flow Diagram • Interactive & Cloud-Synced</p>
         </div>
       </div>
 
@@ -36,20 +36,20 @@
         <!-- Indicador de Auto-Save -->
         <div id="save-status" class="hidden sm:flex items-center text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 transition-all">
           <i class="fa-solid fa-circle-check mr-1.5 animate-pulse"></i>
-          <span>Salvo localmente</span>
+          <span>Auto-saved locally</span>
         </div>
 
         <!-- Botão Nuvem / Compartilhar -->
         <button id="btn-cloud-modal" class="inline-flex items-center px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm hover:shadow transition">
           <i class="fa-solid fa-cloud-arrow-up mr-1.5 sm:mr-2"></i>
-          <span>Nuvem & Salvar</span>
+          <span>Cloud & Save</span>
         </button>
 
         <!-- Menu Exportar -->
         <div class="relative inline-block text-left" id="export-dropdown-container">
           <button id="btn-export-menu" class="inline-flex items-center px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 shadow-sm transition">
             <i class="fa-solid fa-download mr-1.5 sm:mr-2 text-indigo-600"></i>
-            <span>Exportar</span>
+            <span>Export</span>
             <i class="fa-solid fa-chevron-down ml-1.5 text-xs"></i>
           </button>
           <div id="export-menu" class="hidden absolute right-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50 divide-y divide-slate-100 animate-fadeIn">
@@ -57,40 +57,40 @@
               <button id="btn-export-svg" class="w-full text-left flex items-center px-3 py-2 text-xs sm:text-sm rounded-lg hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 font-medium">
                 <i class="fa-solid fa-bezier-curve w-5 text-indigo-500 mr-2"></i>
                 <div>
-                  <div>SVG Vetorial</div>
-                  <div class="text-[10px] text-slate-400 font-normal">Máxima qualidade para artigos</div>
+                  <div>SVG Vector</div>
+                  <div class="text-[10px] text-slate-400 font-normal">Infinite quality for journal publication</div>
                 </div>
               </button>
               <button id="btn-export-png" class="w-full text-left flex items-center px-3 py-2 text-xs sm:text-sm rounded-lg hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 font-medium">
                 <i class="fa-solid fa-file-image w-5 text-emerald-500 mr-2"></i>
                 <div>
-                  <div>PNG em Alta Resolução (300 DPI)</div>
-                  <div class="text-[10px] text-slate-400 font-normal">Pronto para submissão</div>
+                  <div>High-Res PNG (300 DPI)</div>
+                  <div class="text-[10px] text-slate-400 font-normal">Ready for manuscript submission</div>
                 </div>
               </button>
               <button id="btn-copy-png" class="w-full text-left flex items-center px-3 py-2 text-xs sm:text-sm rounded-lg hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 font-medium">
                 <i class="fa-solid fa-copy w-5 text-amber-500 mr-2"></i>
                 <div>
-                  <div>Copiar Imagem</div>
-                  <div class="text-[10px] text-slate-400 font-normal">Colar direto no Word/Docs</div>
+                  <div>Copy Image</div>
+                  <div class="text-[10px] text-slate-400 font-normal">Paste directly into Word/Docs (Ctrl+V)</div>
                 </div>
               </button>
             </div>
             <div class="p-1">
               <button id="btn-print-pdf" class="w-full text-left flex items-center px-3 py-2 text-xs sm:text-sm rounded-lg hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 font-medium">
                 <i class="fa-solid fa-print w-5 text-slate-500 mr-2"></i>
-                Imprimir / Salvar PDF
+                Print / Save as PDF
               </button>
               <button id="btn-export-csv" class="w-full text-left flex items-center px-3 py-2 text-xs sm:text-sm rounded-lg hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 font-medium">
                 <i class="fa-solid fa-file-csv w-5 text-teal-600 mr-2"></i>
-                Exportar CSV (Padrão PRISMA)
+                Export CSV (PRISMA R Compatible)
               </button>
             </div>
           </div>
         </div>
 
         <!-- Botão Reset -->
-        <button id="btn-reset" title="Restaurar valores padrão" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition">
+        <button id="btn-reset" title="Reset to default" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition">
           <i class="fa-solid fa-rotate-left"></i>
         </button>
       </div>
@@ -108,7 +108,7 @@
         <div class="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center justify-between cursor-pointer" onclick="toggleSection('sec-config')">
           <div class="flex items-center space-x-2 font-semibold text-slate-800 text-sm">
             <i class="fa-solid fa-sliders text-indigo-500"></i>
-            <span>Módulos e Opções da Revisão</span>
+            <span>Review Modules & Options</span>
           </div>
           <i id="icon-sec-config" class="fa-solid fa-chevron-up text-slate-400 text-xs transition-transform"></i>
         </div>
@@ -116,18 +116,18 @@
           <!-- Idioma e Esquema de Cores -->
           <div class="grid grid-cols-2 gap-3 pb-3 border-b border-slate-100">
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Idioma do Diagrama</label>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Diagram Language</label>
               <select id="opt-lang" class="w-full text-xs font-medium border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                <option value="pt" selected>Português (BR)</option>
-                <option value="en">English (PRISMA Official)</option>
+                <option value="en" selected>English (PRISMA Official)</option>
+                <option value="pt">Português (BR)</option>
               </select>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Estilo de Cores</label>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Visual Theme</label>
               <select id="opt-theme" class="w-full text-xs font-medium border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                <option value="official" selected>PRISMA Oficial (Ouro & Cinza)</option>
-                <option value="classic">Clássico (Preto e Branco)</option>
-                <option value="modern_blue">Moderno Azul Suave</option>
+                <option value="official" selected>PRISMA 2020 Official</option>
+                <option value="classic">Classic Black & White</option>
+                <option value="modern_blue">Modern Slate Blue</option>
               </select>
             </div>
           </div>
@@ -135,23 +135,23 @@
           <!-- Toggles dos Módulos -->
           <div class="space-y-2 text-xs">
             <label class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 border border-slate-100 cursor-pointer">
-              <span class="font-medium text-slate-700">Estudos Anteriores (Revisão Atualizada)</span>
+              <span class="font-medium text-slate-700">Previous Studies (Updated Review)</span>
               <input type="checkbox" id="chk-previous" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
             </label>
             <label class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 border border-slate-100 cursor-pointer">
-              <span class="font-medium text-slate-700">Outros Métodos (Websites, Organizações, Citações)</span>
+              <span class="font-medium text-slate-700">Other Methods (Websites, Organisations, Citations)</span>
               <input type="checkbox" id="chk-other" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" checked>
             </label>
             <label class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 border border-slate-100 cursor-pointer">
-              <span class="font-medium text-slate-700">Detalhamento de Bases de Dados</span>
+              <span class="font-medium text-slate-700">Specific Databases Detail</span>
               <input type="checkbox" id="chk-dbDetail" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" checked>
             </label>
             <label class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 border border-slate-100 cursor-pointer">
-              <span class="font-medium text-slate-700">Detalhamento de Registros de Ensaios</span>
+              <span class="font-medium text-slate-700">Specific Registers Detail</span>
               <input type="checkbox" id="chk-regDetail" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
             </label>
             <label class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 border border-slate-100 cursor-pointer">
-              <span class="font-medium text-slate-700">Etapa de Metanálise</span>
+              <span class="font-medium text-slate-700">Meta-analysis Section</span>
               <input type="checkbox" id="chk-metaAnalysis" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
             </label>
           </div>
@@ -163,18 +163,18 @@
         <div class="bg-amber-50 px-4 py-3 border-b border-amber-200 flex items-center justify-between cursor-pointer" onclick="toggleSection('sec-prev')">
           <div class="flex items-center space-x-2 font-semibold text-amber-900 text-sm">
             <i class="fa-solid fa-clock-rotate-left text-amber-600"></i>
-            <span>Estudos Anteriores (Revisão Anterior)</span>
+            <span>Previous Studies (Previous Review)</span>
           </div>
           <i id="icon-sec-prev" class="fa-solid fa-chevron-up text-amber-500 text-xs transition-transform"></i>
         </div>
         <div id="sec-prev" class="p-4 space-y-3">
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">Estudos na versão anterior</label>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Studies in previous review</label>
               <input type="number" id="inp-previous_studies" min="0" placeholder="0" class="input-field">
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">Relatórios na versão anterior</label>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Reports in previous review</label>
               <input type="number" id="inp-previous_reports" min="0" placeholder="0" class="input-field">
             </div>
           </div>
@@ -186,7 +186,7 @@
         <div class="bg-sky-50 px-4 py-3 border-b border-sky-200 flex items-center justify-between cursor-pointer" onclick="toggleSection('sec-ident')">
           <div class="flex items-center space-x-2 font-semibold text-sky-900 text-sm">
             <i class="fa-solid fa-magnifying-glass text-sky-600"></i>
-            <span>1. Identificação (Bases & Registros)</span>
+            <span>1. Identification (Databases & Registers)</span>
           </div>
           <i id="icon-sec-ident" class="fa-solid fa-chevron-up text-sky-500 text-xs transition-transform"></i>
         </div>
@@ -196,23 +196,23 @@
             <div class="flex items-center justify-between">
               <label class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                 <i class="fa-solid fa-database text-sky-600"></i>
-                Bases de Dados Individuais
+                Specific Databases
               </label>
               <button type="button" id="btn-add-db" class="text-xs font-semibold text-sky-600 hover:text-sky-800 bg-sky-50 hover:bg-sky-100 px-2 py-1 rounded-md transition flex items-center gap-1">
-                <i class="fa-solid fa-plus text-[10px]"></i> Adicionar Base
+                <i class="fa-solid fa-plus text-[10px]"></i> Add Database
               </button>
             </div>
-            <p class="text-[11px] text-slate-500">Insira o nome da base e a quantidade de registros encontrados.</p>
+            <p class="text-[11px] text-slate-500">Enter each database name and count. Sums automatically into the total.</p>
             
             <div id="db-list" class="space-y-2">
               <!-- Linhas de bases de dados inseridas dinamicamente via JS -->
             </div>
 
             <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-              <span class="text-slate-500 font-medium">Total de Registros em Bases:</span>
+              <span class="text-slate-500 font-medium">Total Records from Databases:</span>
               <div class="flex items-center gap-2">
-                <button type="button" id="btn-sum-dbs" title="Calcular soma automática das bases" class="text-[11px] text-slate-500 hover:text-sky-600 underline">
-                  <i class="fa-solid fa-calculator"></i> Somar
+                <button type="button" id="btn-sum-dbs" title="Calculate sum of databases" class="text-[11px] text-slate-500 hover:text-sky-600 underline">
+                  <i class="fa-solid fa-calculator"></i> Sum
                 </button>
                 <input type="number" id="inp-database_results" min="0" class="w-24 text-right font-bold text-slate-800 border border-slate-300 rounded px-2 py-1 bg-slate-50 focus:bg-white text-xs">
               </div>
@@ -224,20 +224,20 @@
             <div class="flex items-center justify-between">
               <label class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                 <i class="fa-solid fa-clipboard-list text-sky-600"></i>
-                Registros de Ensaios Clínicos
+                Clinical Trial Registers
               </label>
               <button type="button" id="btn-add-reg" class="text-xs font-semibold text-sky-600 hover:text-sky-800 bg-sky-50 hover:bg-sky-100 px-2 py-1 rounded-md transition flex items-center gap-1">
-                <i class="fa-solid fa-plus text-[10px]"></i> Adicionar Registro
+                <i class="fa-solid fa-plus text-[10px]"></i> Add Register
               </button>
             </div>
             <div id="reg-list" class="space-y-2">
               <!-- Linhas de registros dinâmicas -->
             </div>
             <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-              <span class="text-slate-500 font-medium">Total de Registros em Ensaios:</span>
+              <span class="text-slate-500 font-medium">Total Records from Registers:</span>
               <div class="flex items-center gap-2">
-                <button type="button" id="btn-sum-regs" title="Calcular soma automática" class="text-[11px] text-slate-500 hover:text-sky-600 underline">
-                  <i class="fa-solid fa-calculator"></i> Somar
+                <button type="button" id="btn-sum-regs" title="Calculate sum of registers" class="text-[11px] text-slate-500 hover:text-sky-600 underline">
+                  <i class="fa-solid fa-calculator"></i> Sum
                 </button>
                 <input type="number" id="inp-register_results" min="0" class="w-24 text-right font-bold text-slate-800 border border-slate-300 rounded px-2 py-1 bg-slate-50 focus:bg-white text-xs">
               </div>
@@ -248,7 +248,7 @@
           <div id="container-other-methods" class="space-y-2 pt-3 border-t border-slate-200">
             <label class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
               <i class="fa-solid fa-globe text-indigo-600"></i>
-              Outras Fontes (Websites & Citações)
+              Other Sources (Websites, Organisations, Citations)
             </label>
             <div class="grid grid-cols-3 gap-2">
               <div>
@@ -256,11 +256,11 @@
                 <input type="number" id="inp-website_results" min="0" placeholder="0" class="input-field text-xs">
               </div>
               <div>
-                <label class="block text-[11px] text-slate-500 mb-1">Organizações</label>
+                <label class="block text-[11px] text-slate-500 mb-1">Organisations</label>
                 <input type="number" id="inp-organisation_results" min="0" placeholder="0" class="input-field text-xs">
               </div>
               <div>
-                <label class="block text-[11px] text-slate-500 mb-1">Busca Citação</label>
+                <label class="block text-[11px] text-slate-500 mb-1">Citation search</label>
                 <input type="number" id="inp-citations_results" min="0" placeholder="0" class="input-field text-xs">
               </div>
             </div>
@@ -274,25 +274,25 @@
         <div class="bg-indigo-50 px-4 py-3 border-b border-indigo-200 flex items-center justify-between cursor-pointer" onclick="toggleSection('sec-screen')">
           <div class="flex items-center space-x-2 font-semibold text-indigo-900 text-sm">
             <i class="fa-solid fa-filter text-indigo-600"></i>
-            <span>2. Triagem (Screening)</span>
+            <span>2. Screening (Triagem)</span>
           </div>
           <i id="icon-sec-screen" class="fa-solid fa-chevron-up text-indigo-500 text-xs transition-transform"></i>
         </div>
         <div id="sec-screen" class="p-4 space-y-4">
           <!-- Pré-triagem (Duplicatas e Inelegíveis) -->
           <div class="space-y-2">
-            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Registros Removidos antes da Triagem</label>
+            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Records Removed Before Screening</label>
             <div class="grid grid-cols-3 gap-2">
               <div>
-                <label class="block text-[11px] text-slate-500 mb-1">Duplicatas</label>
+                <label class="block text-[11px] text-slate-500 mb-1">Duplicate records</label>
                 <input type="number" id="inp-duplicates" min="0" placeholder="0" class="input-field text-xs">
               </div>
               <div>
-                <label class="block text-[11px] text-slate-500 mb-1">Por Automação</label>
+                <label class="block text-[11px] text-slate-500 mb-1">By automation</label>
                 <input type="number" id="inp-excluded_automatic" min="0" placeholder="0" class="input-field text-xs">
               </div>
               <div>
-                <label class="block text-[11px] text-slate-500 mb-1">Outras Razões</label>
+                <label class="block text-[11px] text-slate-500 mb-1">Other reasons</label>
                 <input type="number" id="inp-excluded_other" min="0" placeholder="0" class="input-field text-xs">
               </div>
             </div>
@@ -301,18 +301,18 @@
           <!-- Triagem de Títulos e Resumos -->
           <div class="pt-3 border-t border-slate-100 space-y-2">
             <div class="flex items-center justify-between">
-              <label class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Triagem de Registros</label>
-              <button type="button" id="btn-calc-screened" title="Calcular registros triados (Total - Duplicatas - Automação - Outras)" class="text-[11px] text-indigo-600 hover:text-indigo-800 underline">
-                <i class="fa-solid fa-calculator"></i> Auto-calcular
+              <label class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Records Screened</label>
+              <button type="button" id="btn-calc-screened" title="Calculate screened: Total - Duplicates - Automation - Other" class="text-[11px] text-indigo-600 hover:text-indigo-800 underline">
+                <i class="fa-solid fa-calculator"></i> Auto-calculate
               </button>
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Registros Triados</label>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Records Screened</label>
                 <input type="number" id="inp-records_screened" min="0" placeholder="0" class="input-field font-semibold text-slate-800">
               </div>
               <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Registros Excluídos</label>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Records Excluded</label>
                 <input type="number" id="inp-records_excluded" min="0" placeholder="0" class="input-field font-semibold text-rose-600">
               </div>
             </div>
@@ -325,7 +325,7 @@
         <div class="bg-violet-50 px-4 py-3 border-b border-violet-200 flex items-center justify-between cursor-pointer" onclick="toggleSection('sec-elig')">
           <div class="flex items-center space-x-2 font-semibold text-violet-900 text-sm">
             <i class="fa-solid fa-file-circle-check text-violet-600"></i>
-            <span>3. Elegibilidade & Busca de Relatórios</span>
+            <span>3. Eligibility & Reports Retrieval</span>
           </div>
           <i id="icon-sec-elig" class="fa-solid fa-chevron-up text-violet-500 text-xs transition-transform"></i>
         </div>
@@ -333,17 +333,17 @@
           <!-- Recuperação de Relatórios de Bases -->
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">Relatórios Buscados</label>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Reports Sought for Retrieval</label>
               <input type="number" id="inp-dbr_sought_reports" min="0" placeholder="0" class="input-field">
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">Não Recuperados</label>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Reports Not Retrieved</label>
               <input type="number" id="inp-dbr_notretrieved_reports" min="0" placeholder="0" class="input-field">
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-medium text-slate-600 mb-1">Relatórios Avaliados para Elegibilidade</label>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Reports Assessed for Eligibility</label>
             <input type="number" id="inp-dbr_assessed" min="0" placeholder="0" class="input-field font-semibold">
           </div>
 
@@ -352,13 +352,13 @@
             <div class="flex items-center justify-between">
               <label class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                 <i class="fa-solid fa-ban text-rose-500"></i>
-                Motivos de Exclusão (Bases & Registros)
+                Reports Excluded by Reason (Databases & Registers)
               </label>
               <button type="button" id="btn-add-dbr-reason" class="text-xs font-semibold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-md transition flex items-center gap-1">
-                <i class="fa-solid fa-plus text-[10px]"></i> Adicionar Motivo
+                <i class="fa-solid fa-plus text-[10px]"></i> Add Reason
               </button>
             </div>
-            <p class="text-[11px] text-slate-500">Adicione os motivos e as quantidades sem se preocupar com sintaxe ou pontos-e-vírgula.</p>
+            <p class="text-[11px] text-slate-500">Add individual reasons and counts with no tricky formatting needed.</p>
             <div id="dbr-reasons-list" class="space-y-2">
               <!-- Linhas de motivos dinâmicas -->
             </div>
@@ -366,18 +366,18 @@
 
           <!-- Outros Métodos: Elegibilidade (Condicional) -->
           <div id="sec-elig-other" class="pt-3 border-t border-slate-200 space-y-3">
-            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Relatórios de Outras Fontes</label>
+            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Reports from Other Methods</label>
             <div class="grid grid-cols-3 gap-2">
               <div>
-                <label class="block text-[11px] text-slate-500 mb-1">Buscados</label>
+                <label class="block text-[11px] text-slate-500 mb-1">Sought</label>
                 <input type="number" id="inp-other_sought_reports" min="0" placeholder="0" class="input-field text-xs">
               </div>
               <div>
-                <label class="block text-[11px] text-slate-500 mb-1">Não Recuperados</label>
+                <label class="block text-[11px] text-slate-500 mb-1">Not retrieved</label>
                 <input type="number" id="inp-other_notretrieved_reports" min="0" placeholder="0" class="input-field text-xs">
               </div>
               <div>
-                <label class="block text-[11px] text-slate-500 mb-1">Avaliados</label>
+                <label class="block text-[11px] text-slate-500 mb-1">Assessed</label>
                 <input type="number" id="inp-other_assessed" min="0" placeholder="0" class="input-field text-xs">
               </div>
             </div>
@@ -386,10 +386,10 @@
             <div class="space-y-2">
               <div class="flex items-center justify-between">
                 <label class="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
-                  Motivos de Exclusão (Outras Fontes)
+                  Reports Excluded by Reason (Other Methods)
                 </label>
                 <button type="button" id="btn-add-other-reason" class="text-[11px] font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded transition">
-                  <i class="fa-solid fa-plus text-[9px]"></i> Motivo
+                  <i class="fa-solid fa-plus text-[9px]"></i> Add Reason
                 </button>
               </div>
               <div id="other-reasons-list" class="space-y-2">
@@ -406,32 +406,32 @@
         <div class="bg-emerald-50 px-4 py-3 border-b border-emerald-200 flex items-center justify-between cursor-pointer" onclick="toggleSection('sec-inc')">
           <div class="flex items-center space-x-2 font-semibold text-emerald-900 text-sm">
             <i class="fa-solid fa-circle-check text-emerald-600"></i>
-            <span>4. Estudos Incluídos (Included)</span>
+            <span>4. Included (Estudos Incluídos)</span>
           </div>
           <i id="icon-sec-inc" class="fa-solid fa-chevron-up text-emerald-500 text-xs transition-transform"></i>
         </div>
         <div id="sec-inc" class="p-4 space-y-3">
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">Novos estudos incluídos</label>
+              <label class="block text-xs font-medium text-slate-600 mb-1">New studies included</label>
               <input type="number" id="inp-new_studies" min="0" placeholder="0" class="input-field font-semibold text-emerald-700">
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">Novos relatórios incluídos</label>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Reports of new studies</label>
               <input type="number" id="inp-new_reports" min="0" placeholder="0" class="input-field font-semibold text-emerald-700">
             </div>
           </div>
 
           <!-- Total de Estudos (Se estudos anteriores estiverem ativos) -->
           <div id="container-total-studies" class="hidden pt-3 border-t border-slate-100 space-y-2">
-            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Total Geral de Estudos Incluídos</label>
+            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Total Studies Included in Review</label>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Total de Estudos</label>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Total Studies</label>
                 <input type="number" id="inp-total_studies" min="0" placeholder="0" class="input-field font-bold text-slate-800">
               </div>
               <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Total de Relatórios</label>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Total Reports</label>
                 <input type="number" id="inp-total_reports" min="0" placeholder="0" class="input-field font-bold text-slate-800">
               </div>
             </div>
@@ -439,14 +439,14 @@
 
           <!-- Metanálise (Condicional) -->
           <div id="container-meta-analysis" class="hidden pt-3 border-t border-slate-100 space-y-2">
-            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Estudos na Metanálise</label>
+            <label class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Studies in Meta-analysis</label>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Estudos em Metanálise</label>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Studies in meta-analysis</label>
                 <input type="number" id="inp-total_studies_ma" min="0" placeholder="0" class="input-field">
               </div>
               <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Relatórios em Metanálise</label>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Reports in meta-analysis</label>
                 <input type="number" id="inp-total_reports_ma" min="0" placeholder="0" class="input-field">
               </div>
             </div>
@@ -457,45 +457,48 @@
     </div>
 
     <!-- COLUNA DA DIREITA: PREVIEW DO FLUXOGRAMA (7 colunas) -->
-    <div class="lg:col-span-7 flex flex-col space-y-4">
+    <div class="lg:col-span-7 flex flex-col space-y-3">
       
-      <!-- Barra de Controle do Visualizador -->
-      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex items-center justify-between">
+      <!-- Barra de Controle do Visualizador com Pan & Zoom Hints -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 px-4 py-2.5 flex items-center justify-between">
         <div class="flex items-center space-x-2">
-          <span class="text-xs font-semibold text-slate-700 uppercase tracking-wider">Visualização em Tempo Real</span>
-          <span id="badge-auto-update" class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800">
-            <span class="w-1.5 h-1.5 mr-1 bg-emerald-500 rounded-full animate-ping"></span> Live
-          </span>
+          <span class="text-xs font-semibold text-slate-700 uppercase tracking-wider">Preview (PRISMA 2020)</span>
+          <span class="text-[11px] text-slate-400 hidden sm:inline">• ✋ Arraste para mover • 🔍 Scroll / Ctrl+Scroll para Zoom</span>
         </div>
         <div class="flex items-center space-x-1.5">
-          <button id="btn-zoom-in" title="Aumentar Zoom" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition">
-            <i class="fa-solid fa-magnifying-glass-plus"></i>
+          <button id="btn-zoom-in" title="Zoom In (+)" class="p-1.5 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition">
+            <i class="fa-solid fa-magnifying-glass-plus text-xs"></i>
           </button>
-          <button id="btn-zoom-out" title="Diminuir Zoom" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition">
-            <i class="fa-solid fa-magnifying-glass-minus"></i>
+          <button id="btn-zoom-out" title="Zoom Out (-)" class="p-1.5 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition">
+            <i class="fa-solid fa-magnifying-glass-minus text-xs"></i>
           </button>
-          <button id="btn-zoom-reset" title="Ajustar ao Tamanho" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition">
-            <i class="fa-solid fa-expand"></i>
+          <button id="btn-zoom-fit" title="Fit to Screen / Ajustar à Tela" class="px-2 py-1 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition flex items-center gap-1">
+            <i class="fa-solid fa-arrows-to-eye text-xs"></i>
+            <span>Fit</span>
+          </button>
+          <button id="btn-zoom-reset" title="100% Zoom" class="p-1.5 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition">
+            <i class="fa-solid fa-compress text-xs"></i>
           </button>
         </div>
       </div>
 
-      <!-- Container do SVG do Diagrama -->
-      <div id="diagram-viewport" class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex-1 min-h-[650px] overflow-auto flex items-center justify-center relative select-none">
-        <div id="diagram-container" class="transition-transform duration-100 origin-top">
+      <!-- Container do Viewport com Pan e Drag -->
+      <div id="diagram-viewport" class="bg-slate-50/70 rounded-xl shadow-inner border border-slate-200 min-h-[700px] h-[calc(100vh-160px)] overflow-hidden relative select-none cursor-grab active:cursor-grabbing">
+        <div id="diagram-container" class="absolute left-0 top-0 origin-top-left transition-none">
           <!-- O SVG é inserido e atualizado aqui dinamicamente pelo renderizador -->
-          <svg id="prisma-svg" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-sm"></svg>
+          <svg id="prisma-svg" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-sm bg-white"></svg>
         </div>
       </div>
 
       <!-- Rodapé do Card de Pré-visualização -->
-      <div class="bg-white rounded-xl shadow-sm border border-slate-200 px-4 py-2.5 flex items-center justify-between text-xs text-slate-500">
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 px-4 py-2 flex items-center justify-between text-xs text-slate-500">
         <div>
-          <span>Em conformidade com o </span>
+          <span>Official standard: </span>
           <a href="https://www.prisma-statement.org/" target="_blank" class="text-indigo-600 hover:underline font-medium">PRISMA 2020 Statement</a>
         </div>
         <div class="flex items-center space-x-3">
-          <span id="canvas-dimensions" class="font-mono text-[11px]">800 × 900 px</span>
+          <span id="zoom-indicator" class="font-mono text-[11px] font-semibold text-slate-600">100%</span>
+          <span id="canvas-dimensions" class="font-mono text-[11px]">880 × 820 px</span>
         </div>
       </div>
 
@@ -513,8 +516,8 @@
             <i class="fa-solid fa-cloud-arrow-up text-lg"></i>
           </div>
           <div>
-            <h3 class="font-bold text-base">Salvar & Sincronizar em Nuvem</h3>
-            <p class="text-xs text-indigo-100">Guarde suas alterações pontuais para continuar de onde parou</p>
+            <h3 class="font-bold text-base">Save & Sync to Cloud</h3>
+            <p class="text-xs text-indigo-100">Keep your data saved to make quick updates anytime</p>
           </div>
         </div>
         <button id="btn-close-modal" class="text-white/80 hover:text-white p-1 rounded-lg transition">
@@ -525,13 +528,13 @@
       <!-- Abas do Modal -->
       <div class="border-b border-slate-200 bg-slate-50 flex text-xs font-semibold">
         <button id="tab-btn-url" class="modal-tab active-tab flex-1 py-3 text-center border-b-2 border-indigo-600 text-indigo-600" onclick="switchModalTab('url')">
-          <i class="fa-solid fa-link mr-1.5"></i> Link Permanente (Hash)
+          <i class="fa-solid fa-link mr-1.5"></i> Permanent URL Hash
         </button>
         <button id="tab-btn-cloud" class="modal-tab flex-1 py-3 text-center border-b-2 border-transparent text-slate-500 hover:text-slate-800" onclick="switchModalTab('cloud')">
-          <i class="fa-solid fa-server mr-1.5"></i> Nuvem Remota
+          <i class="fa-solid fa-server mr-1.5"></i> Cloud Project ID
         </button>
         <button id="tab-btn-file" class="modal-tab flex-1 py-3 text-center border-b-2 border-transparent text-slate-500 hover:text-slate-800" onclick="switchModalTab('file')">
-          <i class="fa-solid fa-file-code mr-1.5"></i> Arquivo (.json/.csv)
+          <i class="fa-solid fa-file-code mr-1.5"></i> File Backup (.json/.csv)
         </button>
       </div>
 
@@ -541,34 +544,34 @@
         <!-- ABA 1: LINK PERMANENTE (URL COMPRIMIDA) -->
         <div id="tab-content-url" class="space-y-3">
           <p class="text-xs text-slate-600">
-            Este link contém <strong>100% dos dados da sua revisão gravados no próprio link</strong>. Salve-o nos seus favoritos ou documentos. Ao abrir, ele carrega exatamente como você deixou!
+            This URL contains <strong>100% of your flowchart state compressed directly inside the link</strong>. Bookmark it or save it in your notes. Opening it on any device restores everything!
           </p>
           <div class="flex items-center space-x-2">
             <input type="text" id="inp-cloud-url" readonly class="w-full text-xs font-mono bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-700 select-all focus:outline-none">
             <button id="btn-copy-url" class="shrink-0 px-3.5 py-2.5 text-xs font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition flex items-center gap-1.5">
               <i class="fa-solid fa-copy"></i>
-              <span id="txt-copy-url">Copiar</span>
+              <span id="txt-copy-url">Copy</span>
             </button>
           </div>
           <p class="text-[11px] text-emerald-600 flex items-center gap-1">
-            <i class="fa-solid fa-shield-check"></i> Sem necessidade de login ou servidor. Não expira nunca!
+            <i class="fa-solid fa-shield-check"></i> Zero server dependency, no login required. Never expires!
           </p>
         </div>
 
         <!-- ABA 2: NUVEM REMOTA (JSONBin / KV Storage) -->
         <div id="tab-content-cloud" class="hidden space-y-3">
           <p class="text-xs text-slate-600">
-            Sincronize com um ID de nuvem para carregar em outros computadores de forma simples.
+            Save with a custom Project ID to reload quickly across different browser sessions.
           </p>
           <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">ID do Projeto / Nuvem</label>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Project / Cloud ID</label>
             <div class="flex items-center space-x-2">
-              <input type="text" id="inp-cloud-id" placeholder="ex: revisao-sistematica-nathan" class="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <input type="text" id="inp-cloud-id" placeholder="e.g. systematic-review-nathan" class="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
               <button id="btn-save-cloud" class="shrink-0 px-3 py-2 text-xs font-semibold rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition">
-                <i class="fa-solid fa-floppy-disk mr-1"></i> Salvar
+                <i class="fa-solid fa-floppy-disk mr-1"></i> Save
               </button>
               <button id="btn-load-cloud" class="shrink-0 px-3 py-2 text-xs font-semibold rounded-lg text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition">
-                <i class="fa-solid fa-cloud-arrow-down mr-1"></i> Carregar
+                <i class="fa-solid fa-cloud-arrow-down mr-1"></i> Load
               </button>
             </div>
           </div>
@@ -578,15 +581,15 @@
         <!-- ABA 3: ARQUIVOS DE BACKUP -->
         <div id="tab-content-file" class="hidden space-y-4">
           <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">Salvar no seu Computador / Google Drive</label>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Save to Computer / Google Drive</label>
             <button id="btn-download-json" class="w-full py-2.5 px-4 text-xs font-semibold rounded-lg text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition flex items-center justify-center gap-2">
-              <i class="fa-solid fa-file-arrow-down text-indigo-600"></i> Baixar Arquivo do Projeto (.prisma / .json)
+              <i class="fa-solid fa-file-arrow-down text-indigo-600"></i> Download Project File (.prisma / .json)
             </button>
           </div>
           <div class="pt-3 border-t border-slate-200">
-            <label class="block text-xs font-semibold text-slate-700 mb-1">Carregar Arquivo Existente</label>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Load Existing File</label>
             <input type="file" id="inp-load-file" accept=".json,.prisma,.csv" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
-            <p class="text-[11px] text-slate-400 mt-1">Aceita arquivos .json/.prisma ou o CSV do PRISMA2020 original.</p>
+            <p class="text-[11px] text-slate-400 mt-1">Supports .json/.prisma files or the original PRISMA2020 CSV format.</p>
           </div>
         </div>
 
@@ -595,7 +598,7 @@
       <!-- Rodapé do Modal -->
       <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 flex justify-end">
         <button id="btn-dismiss-modal" class="px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-200 rounded-lg transition">
-          Fechar
+          Close
         </button>
       </div>
     </div>
@@ -604,7 +607,7 @@
   <!-- TOAST NOTIFICATION -->
   <div id="toast" class="fixed bottom-6 right-6 z-50 hidden bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl border border-slate-700 text-xs font-medium flex items-center space-x-2 animate-bounce">
     <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400"></i>
-    <span id="toast-text">Salvo com sucesso!</span>
+    <span id="toast-text">Saved successfully!</span>
   </div>
 
   <!-- Scripts da Aplicação -->
