@@ -2,6 +2,7 @@
  * PRISMA 2020 Flowchart Generator
  * Modern Standalone Web App for PRISMA 2020 Flow Diagrams
  * Designed for Nathan - Systematic Review
+ * Compliant with Cochrane Handbook (4.6.1), PRISMA 2020 & MECIR (C44)
  */
 
 // GLOBAL APPLICATION STATE
@@ -13,7 +14,8 @@ const state = {
     other: true,
     dbDetail: true,
     regDetail: false,
-    metaAnalysis: false
+    metaAnalysis: false,
+    hideZero: true // Hide fields with n = 0 (e.g. Registers n = 0, unused automation)
   },
   data: {
     previous_studies: 0,
@@ -38,6 +40,10 @@ const state = {
     excluded_other: 10,
     records_screened: 875,
     records_excluded: 715,
+    screening_reasons: [
+      { reason: "Duplicates identified during screening", count: 15 },
+      { reason: "Ineligible study design or population", count: 700 }
+    ],
     dbr_sought_reports: 160,
     dbr_notretrieved_reports: 12,
     dbr_assessed: 148,
@@ -183,11 +189,12 @@ const themes = {
   }
 };
 
-// PAN & ZOOM STATE
+// PAN & ZOOM AND INTERACTIVE DRAG STATE
 let zoomLevel = 1.0;
 let panX = 0;
 let panY = 0;
 let isDragging = false;
+let dragMoved = false;
 let startDragX = 0;
 let startDragY = 0;
 
@@ -241,7 +248,7 @@ function loadSavedState() {
   }
 }
 
-// AUTO-SAVE TO LOCALSTORAGE & CLOUD HASH
+// AUTO-SAVE TO LOCALSTORAGE
 let saveTimeout = null;
 function autoSave() {
   if (saveTimeout) clearTimeout(saveTimeout);
@@ -281,6 +288,9 @@ function syncUIFromState() {
   const chkMeta = document.getElementById("chk-metaAnalysis");
   if (chkMeta) chkMeta.checked = state.options.metaAnalysis;
 
+  const chkHideZero = document.getElementById("chk-hideZero");
+  if (chkHideZero) chkHideZero.checked = state.options.hideZero !== false;
+
   // Toggle conditional UI sections
   toggleConditionalCards();
 
@@ -309,7 +319,7 @@ function toggleConditionalCards() {
     containerOther.classList.toggle("hidden", !state.options.other);
   }
 
-  const containerOtherEx = document.getElementById("container-other-exclusions");
+  const containerOtherEx = document.getElementById("sec-elig-other");
   if (containerOtherEx) {
     containerOtherEx.classList.toggle("hidden", !state.options.other);
   }
@@ -320,13 +330,22 @@ function toggleConditionalCards() {
   }
 }
 
-// DYNAMIC LISTS RENDERING (Databases, Registers, Reasons)
+// DYNAMIC LISTS RENDERING WITH REORDERING (▲ Up / ▼ Down)
 function renderFormLists() {
   // Databases list
   const dbList = document.getElementById("db-list");
   if (dbList) {
     dbList.innerHTML = state.data.databases.map((db, idx) => `
-      <div class="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+      <div class="flex items-center space-x-1.5 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+        <!-- Reorder buttons -->
+        <div class="flex flex-col space-y-0.5">
+          <button type="button" data-idx="${idx}" class="btn-move-db-up text-slate-400 hover:text-indigo-600 disabled:opacity-20 p-0.5" title="Move Up" ${idx === 0 ? 'disabled' : ''}>
+            <i class="fa-solid fa-chevron-up text-[9px]"></i>
+          </button>
+          <button type="button" data-idx="${idx}" class="btn-move-db-down text-slate-400 hover:text-indigo-600 disabled:opacity-20 p-0.5" title="Move Down" ${idx === state.data.databases.length - 1 ? 'disabled' : ''}>
+            <i class="fa-solid fa-chevron-down text-[9px]"></i>
+          </button>
+        </div>
         <input type="text" value="${escapeHtml(db.name)}" data-idx="${idx}" class="db-name-input flex-1 text-xs px-2 py-1 border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500">
         <input type="number" min="0" value="${db.count}" data-idx="${idx}" class="db-count-input w-20 text-right text-xs px-2 py-1 border border-slate-300 rounded bg-white font-medium focus:outline-none focus:ring-1 focus:ring-sky-500">
         <button type="button" data-idx="${idx}" class="btn-del-db text-slate-400 hover:text-rose-500 p-1 transition" title="Remove database">
@@ -340,10 +359,41 @@ function renderFormLists() {
   const regList = document.getElementById("reg-list");
   if (regList) {
     regList.innerHTML = state.data.registers.map((reg, idx) => `
-      <div class="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+      <div class="flex items-center space-x-1.5 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+        <div class="flex flex-col space-y-0.5">
+          <button type="button" data-idx="${idx}" class="btn-move-reg-up text-slate-400 hover:text-indigo-600 disabled:opacity-20 p-0.5" title="Move Up" ${idx === 0 ? 'disabled' : ''}>
+            <i class="fa-solid fa-chevron-up text-[9px]"></i>
+          </button>
+          <button type="button" data-idx="${idx}" class="btn-move-reg-down text-slate-400 hover:text-indigo-600 disabled:opacity-20 p-0.5" title="Move Down" ${idx === state.data.registers.length - 1 ? 'disabled' : ''}>
+            <i class="fa-solid fa-chevron-down text-[9px]"></i>
+          </button>
+        </div>
         <input type="text" value="${escapeHtml(reg.name)}" data-idx="${idx}" class="reg-name-input flex-1 text-xs px-2 py-1 border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-sky-500">
         <input type="number" min="0" value="${reg.count}" data-idx="${idx}" class="reg-count-input w-20 text-right text-xs px-2 py-1 border border-slate-300 rounded bg-white font-medium focus:outline-none focus:ring-1 focus:ring-sky-500">
         <button type="button" data-idx="${idx}" class="btn-del-reg text-slate-400 hover:text-rose-500 p-1 transition" title="Remove register">
+          <i class="fa-solid fa-trash-can text-xs"></i>
+        </button>
+      </div>
+    `).join("");
+  }
+
+  // Screening exclusion reasons list
+  const screenList = document.getElementById("screening-reasons-list");
+  if (screenList) {
+    if (!state.data.screening_reasons) state.data.screening_reasons = [];
+    screenList.innerHTML = state.data.screening_reasons.map((r, idx) => `
+      <div class="flex items-center space-x-1.5 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+        <div class="flex flex-col space-y-0.5">
+          <button type="button" data-idx="${idx}" class="btn-move-screen-up text-slate-400 hover:text-indigo-600 disabled:opacity-20 p-0.5" title="Move Up" ${idx === 0 ? 'disabled' : ''}>
+            <i class="fa-solid fa-chevron-up text-[9px]"></i>
+          </button>
+          <button type="button" data-idx="${idx}" class="btn-move-screen-down text-slate-400 hover:text-indigo-600 disabled:opacity-20 p-0.5" title="Move Down" ${idx === state.data.screening_reasons.length - 1 ? 'disabled' : ''}>
+            <i class="fa-solid fa-chevron-down text-[9px]"></i>
+          </button>
+        </div>
+        <input type="text" value="${escapeHtml(r.reason)}" data-idx="${idx}" class="screen-reason-input flex-1 text-xs px-2 py-1 border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Ex: Duplicates identified during screening">
+        <input type="number" min="0" value="${r.count}" data-idx="${idx}" class="screen-count-input w-20 text-right text-xs px-2 py-1 border border-slate-300 rounded bg-white font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500">
+        <button type="button" data-idx="${idx}" class="btn-del-screen-reason text-slate-400 hover:text-rose-500 p-1 transition" title="Remove reason">
           <i class="fa-solid fa-trash-can text-xs"></i>
         </button>
       </div>
@@ -354,7 +404,15 @@ function renderFormLists() {
   const dbrList = document.getElementById("dbr-reasons-list");
   if (dbrList) {
     dbrList.innerHTML = state.data.dbr_reasons.map((r, idx) => `
-      <div class="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+      <div class="flex items-center space-x-1.5 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+        <div class="flex flex-col space-y-0.5">
+          <button type="button" data-idx="${idx}" class="btn-move-dbr-up text-slate-400 hover:text-indigo-600 disabled:opacity-20 p-0.5" title="Move Up" ${idx === 0 ? 'disabled' : ''}>
+            <i class="fa-solid fa-chevron-up text-[9px]"></i>
+          </button>
+          <button type="button" data-idx="${idx}" class="btn-move-dbr-down text-slate-400 hover:text-indigo-600 disabled:opacity-20 p-0.5" title="Move Down" ${idx === state.data.dbr_reasons.length - 1 ? 'disabled' : ''}>
+            <i class="fa-solid fa-chevron-down text-[9px]"></i>
+          </button>
+        </div>
         <input type="text" value="${escapeHtml(r.reason)}" data-idx="${idx}" class="dbr-reason-input flex-1 text-xs px-2 py-1 border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500">
         <input type="number" min="0" value="${r.count}" data-idx="${idx}" class="dbr-count-input w-20 text-right text-xs px-2 py-1 border border-slate-300 rounded bg-white font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500">
         <button type="button" data-idx="${idx}" class="btn-del-dbr-reason text-slate-400 hover:text-rose-500 p-1 transition" title="Remove reason">
@@ -368,7 +426,15 @@ function renderFormLists() {
   const otherList = document.getElementById("other-reasons-list");
   if (otherList) {
     otherList.innerHTML = state.data.other_reasons.map((r, idx) => `
-      <div class="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+      <div class="flex items-center space-x-1.5 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+        <div class="flex flex-col space-y-0.5">
+          <button type="button" data-idx="${idx}" class="btn-move-other-up text-slate-400 hover:text-indigo-600 disabled:opacity-20 p-0.5" title="Move Up" ${idx === 0 ? 'disabled' : ''}>
+            <i class="fa-solid fa-chevron-up text-[9px]"></i>
+          </button>
+          <button type="button" data-idx="${idx}" class="btn-move-other-down text-slate-400 hover:text-indigo-600 disabled:opacity-20 p-0.5" title="Move Down" ${idx === state.data.other_reasons.length - 1 ? 'disabled' : ''}>
+            <i class="fa-solid fa-chevron-down text-[9px]"></i>
+          </button>
+        </div>
         <input type="text" value="${escapeHtml(r.reason)}" data-idx="${idx}" class="other-reason-input flex-1 text-xs px-2 py-1 border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500">
         <input type="number" min="0" value="${r.count}" data-idx="${idx}" class="other-count-input w-20 text-right text-xs px-2 py-1 border border-slate-300 rounded bg-white font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500">
         <button type="button" data-idx="${idx}" class="btn-del-other-reason text-slate-400 hover:text-rose-500 p-1 transition" title="Remove reason">
@@ -377,6 +443,14 @@ function renderFormLists() {
       </div>
     `).join("");
   }
+}
+
+// HELPER: SWAP ITEMS IN ARRAY
+function swapArrayItems(arr, fromIdx, toIdx) {
+  if (fromIdx < 0 || fromIdx >= arr.length || toIdx < 0 || toIdx >= arr.length) return;
+  const temp = arr[fromIdx];
+  arr[fromIdx] = arr[toIdx];
+  arr[toIdx] = temp;
 }
 
 // PAN & ZOOM HANDLING
@@ -388,6 +462,7 @@ function initPanAndZoom() {
   viewport.addEventListener("mousedown", (e) => {
     if (e.button !== 0) return; // Only left click
     isDragging = true;
+    dragMoved = false;
     startDragX = e.clientX - panX;
     startDragY = e.clientY - panY;
     viewport.classList.add("cursor-grabbing");
@@ -396,8 +471,13 @@ function initPanAndZoom() {
 
   window.addEventListener("mousemove", (e) => {
     if (!isDragging) return;
-    panX = e.clientX - startDragX;
-    panY = e.clientY - startDragY;
+    const curX = e.clientX - startDragX;
+    const curY = e.clientY - startDragY;
+    if (Math.abs(curX - panX) > 3 || Math.abs(curY - panY) > 3) {
+      dragMoved = true;
+    }
+    panX = curX;
+    panY = curY;
     applyTransform();
   });
 
@@ -453,6 +533,49 @@ function initPanAndZoom() {
       panX = 25;
       panY = 25;
       applyTransform();
+    });
+  }
+
+  // Interactive Click-to-Focus: Click SVG box -> Jump & Highlight Form Field
+  const svgEl = document.getElementById("prisma-svg");
+  if (svgEl) {
+    svgEl.addEventListener("click", (e) => {
+      // If user was dragging to move diagram, ignore click
+      if (dragMoved) return;
+
+      const clickable = e.target.closest(".clickable-box");
+      if (!clickable) return;
+
+      const targetId = clickable.getAttribute("data-target");
+      const sectionId = clickable.getAttribute("data-section");
+
+      // Expand accordion section if closed
+      if (sectionId) {
+        const sec = document.getElementById(sectionId);
+        if (sec && sec.classList.contains("hidden")) {
+          toggleSection(sectionId);
+        }
+      }
+
+      // Scroll and highlight target
+      if (targetId) {
+        const target = document.getElementById(targetId);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          target.classList.remove("highlight-target");
+          void target.offsetWidth; // force browser reflow for CSS re-trigger
+          target.classList.add("highlight-target");
+
+          if (typeof target.focus === "function") {
+            target.focus();
+            if (typeof target.select === "function") target.select();
+          }
+
+          setTimeout(() => {
+            target.classList.remove("highlight-target");
+          }, 2200);
+        }
+      }
     });
   }
 }
@@ -530,6 +653,7 @@ function bindEvents() {
   bindCheckbox("chk-dbDetail", "dbDetail");
   bindCheckbox("chk-regDetail", "regDetail");
   bindCheckbox("chk-metaAnalysis", "metaAnalysis");
+  bindCheckbox("chk-hideZero", "hideZero");
 
   // Number Inputs
   const numberInputs = [
@@ -571,6 +695,14 @@ function bindEvents() {
     renderDiagram();
   });
 
+  document.getElementById("btn-add-screen-reason")?.addEventListener("click", () => {
+    if (!state.data.screening_reasons) state.data.screening_reasons = [];
+    state.data.screening_reasons.push({ reason: `Screening Reason ${state.data.screening_reasons.length + 1}`, count: 0 });
+    renderFormLists();
+    autoSave();
+    renderDiagram();
+  });
+
   document.getElementById("btn-add-dbr-reason")?.addEventListener("click", () => {
     state.data.dbr_reasons.push({ reason: `Reason ${state.data.dbr_reasons.length + 1}`, count: 0 });
     renderFormLists();
@@ -589,53 +721,158 @@ function bindEvents() {
   document.addEventListener("input", (e) => {
     const t = e.target;
     if (t.classList.contains("db-name-input")) {
-      const idx = t.getAttribute("data-idx");
+      const idx = parseInt(t.getAttribute("data-idx"), 10);
       state.data.databases[idx].name = t.value;
       autoSave();
       renderDiagram();
     } else if (t.classList.contains("db-count-input")) {
-      const idx = t.getAttribute("data-idx");
+      const idx = parseInt(t.getAttribute("data-idx"), 10);
       state.data.databases[idx].count = parseInt(t.value, 10) || 0;
       autoSave();
       renderDiagram();
     } else if (t.classList.contains("reg-name-input")) {
-      const idx = t.getAttribute("data-idx");
+      const idx = parseInt(t.getAttribute("data-idx"), 10);
       state.data.registers[idx].name = t.value;
       autoSave();
       renderDiagram();
     } else if (t.classList.contains("reg-count-input")) {
-      const idx = t.getAttribute("data-idx");
+      const idx = parseInt(t.getAttribute("data-idx"), 10);
       state.data.registers[idx].count = parseInt(t.value, 10) || 0;
       autoSave();
       renderDiagram();
+    } else if (t.classList.contains("screen-reason-input")) {
+      const idx = parseInt(t.getAttribute("data-idx"), 10);
+      state.data.screening_reasons[idx].reason = t.value;
+      autoSave();
+      renderDiagram();
+    } else if (t.classList.contains("screen-count-input")) {
+      const idx = parseInt(t.getAttribute("data-idx"), 10);
+      state.data.screening_reasons[idx].count = parseInt(t.value, 10) || 0;
+      autoSave();
+      renderDiagram();
     } else if (t.classList.contains("dbr-reason-input")) {
-      const idx = t.getAttribute("data-idx");
+      const idx = parseInt(t.getAttribute("data-idx"), 10);
       state.data.dbr_reasons[idx].reason = t.value;
       autoSave();
       renderDiagram();
     } else if (t.classList.contains("dbr-count-input")) {
-      const idx = t.getAttribute("data-idx");
+      const idx = parseInt(t.getAttribute("data-idx"), 10);
       state.data.dbr_reasons[idx].count = parseInt(t.value, 10) || 0;
       autoSave();
       renderDiagram();
     } else if (t.classList.contains("other-reason-input")) {
-      const idx = t.getAttribute("data-idx");
+      const idx = parseInt(t.getAttribute("data-idx"), 10);
       state.data.other_reasons[idx].reason = t.value;
       autoSave();
       renderDiagram();
     } else if (t.classList.contains("other-count-input")) {
-      const idx = t.getAttribute("data-idx");
+      const idx = parseInt(t.getAttribute("data-idx"), 10);
       state.data.other_reasons[idx].count = parseInt(t.value, 10) || 0;
       autoSave();
       renderDiagram();
     }
   });
 
-  // Dynamic Item Delete Delegation
+  // Dynamic Item Delete and Reorder Delegation
   document.addEventListener("click", (e) => {
+    // 1. REORDER UP
+    const btnUpDb = e.target.closest(".btn-move-db-up");
+    if (btnUpDb) {
+      const idx = parseInt(btnUpDb.getAttribute("data-idx"), 10);
+      swapArrayItems(state.data.databases, idx, idx - 1);
+      renderFormLists();
+      autoSave();
+      renderDiagram();
+      return;
+    }
+    const btnUpReg = e.target.closest(".btn-move-reg-up");
+    if (btnUpReg) {
+      const idx = parseInt(btnUpReg.getAttribute("data-idx"), 10);
+      swapArrayItems(state.data.registers, idx, idx - 1);
+      renderFormLists();
+      autoSave();
+      renderDiagram();
+      return;
+    }
+    const btnUpScreen = e.target.closest(".btn-move-screen-up");
+    if (btnUpScreen) {
+      const idx = parseInt(btnUpScreen.getAttribute("data-idx"), 10);
+      swapArrayItems(state.data.screening_reasons, idx, idx - 1);
+      renderFormLists();
+      autoSave();
+      renderDiagram();
+      return;
+    }
+    const btnUpDbr = e.target.closest(".btn-move-dbr-up");
+    if (btnUpDbr) {
+      const idx = parseInt(btnUpDbr.getAttribute("data-idx"), 10);
+      swapArrayItems(state.data.dbr_reasons, idx, idx - 1);
+      renderFormLists();
+      autoSave();
+      renderDiagram();
+      return;
+    }
+    const btnUpOther = e.target.closest(".btn-move-other-up");
+    if (btnUpOther) {
+      const idx = parseInt(btnUpOther.getAttribute("data-idx"), 10);
+      swapArrayItems(state.data.other_reasons, idx, idx - 1);
+      renderFormLists();
+      autoSave();
+      renderDiagram();
+      return;
+    }
+
+    // 2. REORDER DOWN
+    const btnDownDb = e.target.closest(".btn-move-db-down");
+    if (btnDownDb) {
+      const idx = parseInt(btnDownDb.getAttribute("data-idx"), 10);
+      swapArrayItems(state.data.databases, idx, idx + 1);
+      renderFormLists();
+      autoSave();
+      renderDiagram();
+      return;
+    }
+    const btnDownReg = e.target.closest(".btn-move-reg-down");
+    if (btnDownReg) {
+      const idx = parseInt(btnDownReg.getAttribute("data-idx"), 10);
+      swapArrayItems(state.data.registers, idx, idx + 1);
+      renderFormLists();
+      autoSave();
+      renderDiagram();
+      return;
+    }
+    const btnDownScreen = e.target.closest(".btn-move-screen-down");
+    if (btnDownScreen) {
+      const idx = parseInt(btnDownScreen.getAttribute("data-idx"), 10);
+      swapArrayItems(state.data.screening_reasons, idx, idx + 1);
+      renderFormLists();
+      autoSave();
+      renderDiagram();
+      return;
+    }
+    const btnDownDbr = e.target.closest(".btn-move-dbr-down");
+    if (btnDownDbr) {
+      const idx = parseInt(btnDownDbr.getAttribute("data-idx"), 10);
+      swapArrayItems(state.data.dbr_reasons, idx, idx + 1);
+      renderFormLists();
+      autoSave();
+      renderDiagram();
+      return;
+    }
+    const btnDownOther = e.target.closest(".btn-move-other-down");
+    if (btnDownOther) {
+      const idx = parseInt(btnDownOther.getAttribute("data-idx"), 10);
+      swapArrayItems(state.data.other_reasons, idx, idx + 1);
+      renderFormLists();
+      autoSave();
+      renderDiagram();
+      return;
+    }
+
+    // 3. DELETE ITEMS
     const btnDelDb = e.target.closest(".btn-del-db");
     if (btnDelDb) {
-      const idx = btnDelDb.getAttribute("data-idx");
+      const idx = parseInt(btnDelDb.getAttribute("data-idx"), 10);
       state.data.databases.splice(idx, 1);
       renderFormLists();
       autoSave();
@@ -644,8 +881,17 @@ function bindEvents() {
     }
     const btnDelReg = e.target.closest(".btn-del-reg");
     if (btnDelReg) {
-      const idx = btnDelReg.getAttribute("data-idx");
+      const idx = parseInt(btnDelReg.getAttribute("data-idx"), 10);
       state.data.registers.splice(idx, 1);
+      renderFormLists();
+      autoSave();
+      renderDiagram();
+      return;
+    }
+    const btnDelScreen = e.target.closest(".btn-del-screen-reason");
+    if (btnDelScreen) {
+      const idx = parseInt(btnDelScreen.getAttribute("data-idx"), 10);
+      state.data.screening_reasons.splice(idx, 1);
       renderFormLists();
       autoSave();
       renderDiagram();
@@ -653,7 +899,7 @@ function bindEvents() {
     }
     const btnDelDbr = e.target.closest(".btn-del-dbr-reason");
     if (btnDelDbr) {
-      const idx = btnDelDbr.getAttribute("data-idx");
+      const idx = parseInt(btnDelDbr.getAttribute("data-idx"), 10);
       state.data.dbr_reasons.splice(idx, 1);
       renderFormLists();
       autoSave();
@@ -662,7 +908,7 @@ function bindEvents() {
     }
     const btnDelOther = e.target.closest(".btn-del-other-reason");
     if (btnDelOther) {
-      const idx = btnDelOther.getAttribute("data-idx");
+      const idx = parseInt(btnDelOther.getAttribute("data-idx"), 10);
       state.data.other_reasons.splice(idx, 1);
       renderFormLists();
       autoSave();
@@ -690,6 +936,18 @@ function bindEvents() {
     autoSave();
     renderDiagram();
     showToast(`Registers total calculated: ${sum}`);
+  });
+
+  document.getElementById("btn-sum-screen-reasons")?.addEventListener("click", () => {
+    if (state.data.screening_reasons && state.data.screening_reasons.length > 0) {
+      const sum = state.data.screening_reasons.reduce((acc, curr) => acc + (parseInt(curr.count, 10) || 0), 0);
+      state.data.records_excluded = sum;
+      const inp = document.getElementById("inp-records_excluded");
+      if (inp) inp.value = sum;
+      autoSave();
+      renderDiagram();
+      showToast(`Total excluded records calculated from reasons: ${sum}`);
+    }
   });
 
   document.getElementById("btn-calc-screened")?.addEventListener("click", () => {
@@ -1127,7 +1385,7 @@ function escapeHtml(text) {
 }
 
 // =========================================================================
-// PRISMA 2020 SVG RENDERING ENGINE (EXACT MATCH TO OFFICIAL STANDARD)
+// PRISMA 2020 SVG RENDERING ENGINE (WITH SMART ZERO HIDING & INTERACTIVE FOCUS)
 // =========================================================================
 function renderDiagram() {
   const svg = document.getElementById("prisma-svg");
@@ -1136,6 +1394,7 @@ function renderDiagram() {
   const lang = state.options.lang || 'en';
   const t = i18n[lang] || i18n.en;
   const th = themes[state.options.theme] || themes.official;
+  const hideZero = state.options.hideZero !== false;
 
   // DIMENSIONS AND GEOMETRY
   const stageColWidth = 26;
@@ -1176,7 +1435,9 @@ function renderDiagram() {
   const totalWidth = curX + 25;
 
   // BUILD TEXT LINES FOR EACH BOX
+
   // 1. Box 1: Records identified from databases & registers
+  // Cochrane Handbook & MECIR: n is the total number of articles/records retrieved
   const box1Lines = [t.rec_identified_from];
   box1Lines.push(`${t.databases} (n = ${state.data.database_results || 0})`);
   if (state.options.dbDetail && state.data.databases && state.data.databases.length > 0) {
@@ -1184,21 +1445,37 @@ function renderDiagram() {
       box1Lines.push(`${db.name} (n = ${db.count})`);
     });
   }
-  box1Lines.push(`${t.registers} (n = ${state.data.register_results || 0})`);
-  if (state.options.regDetail && state.data.registers && state.data.registers.length > 0) {
-    state.data.registers.forEach(reg => {
-      box1Lines.push(`${reg.name} (n = ${reg.count})`);
-    });
+
+  // Registers: Only show if NOT hidden by hideZero (or if count > 0 or registers list active)
+  const hasRegResults = (state.data.register_results > 0) || (state.options.regDetail && state.data.registers.length > 0);
+  if (!hideZero || hasRegResults) {
+    box1Lines.push(`${t.registers} (n = ${state.data.register_results || 0})`);
+    if (state.options.regDetail && state.data.registers && state.data.registers.length > 0) {
+      state.data.registers.forEach(reg => {
+        box1Lines.push(`${reg.name} (n = ${reg.count})`);
+      });
+    }
   }
 
   // 2. Box 2: Records removed before screening
-  const box2Lines = [
-    t.removed_before_screening,
-    `Duplicate records removed (n = ${state.data.duplicates || 0})`,
-    `Records marked as ineligible by automation`,
-    `tools (n = ${state.data.excluded_automatic || 0})`,
-    `Records removed for other reasons (n = ${state.data.excluded_other || 0})`
-  ];
+  const box2Lines = [t.removed_before_screening];
+  let removedCount = 0;
+  if (!hideZero || (state.data.duplicates || 0) > 0) {
+    box2Lines.push(`Duplicate records removed (n = ${state.data.duplicates || 0})`);
+    removedCount++;
+  }
+  if (!hideZero || (state.data.excluded_automatic || 0) > 0) {
+    box2Lines.push(`Records marked as ineligible by automation`);
+    box2Lines.push(`tools (n = ${state.data.excluded_automatic || 0})`);
+    removedCount++;
+  }
+  if (!hideZero || (state.data.excluded_other || 0) > 0) {
+    box2Lines.push(`Records removed for other reasons (n = ${state.data.excluded_other || 0})`);
+    removedCount++;
+  }
+  if (removedCount === 0) {
+    box2Lines.push(`None removed (n = 0)`);
+  }
 
   // 3. Box 3: Records screened
   const box3Lines = [
@@ -1206,11 +1483,18 @@ function renderDiagram() {
     `(n = ${state.data.records_screened || 0})`
   ];
 
-  // 4. Box 4: Records excluded
+  // 4. Box 4: Records excluded during screening (Supports itemized reasons, e.g. Duplicates identified during screening)
   const box4Lines = [
     t.records_excluded,
     `(n = ${state.data.records_excluded || 0})`
   ];
+  if (state.data.screening_reasons && state.data.screening_reasons.length > 0) {
+    state.data.screening_reasons.forEach(r => {
+      if (!hideZero || r.count > 0 || state.data.screening_reasons.length === 1) {
+        box4Lines.push(`${r.reason} (n = ${r.count})`);
+      }
+    });
+  }
 
   // 5. Box 5: Reports sought for retrieval (Main track)
   const box5Lines = [
@@ -1234,7 +1518,9 @@ function renderDiagram() {
   const box8Lines = [t.reports_excluded];
   if (state.data.dbr_reasons && state.data.dbr_reasons.length > 0) {
     state.data.dbr_reasons.forEach(r => {
-      box8Lines.push(`${r.reason} (n = ${r.count})`);
+      if (!hideZero || r.count > 0 || state.data.dbr_reasons.length === 1) {
+        box8Lines.push(`${r.reason} (n = ${r.count})`);
+      }
     });
   } else {
     box8Lines.push(`Reason 1 (n = 0)`);
@@ -1257,12 +1543,23 @@ function renderDiagram() {
   }
 
   // 10. Box 10: Records identified from other sources
-  const box10Lines = [
-    t.rec_identified_from,
-    `${t.websites} (n = ${state.data.website_results || 0})`,
-    `${t.organisations} (n = ${state.data.organisation_results || 0})`,
-    `${t.citations} (n = ${state.data.citations_results || 0})`
-  ];
+  const box10Lines = [t.rec_identified_from];
+  let otherSourcesCount = 0;
+  if (!hideZero || (state.data.website_results || 0) > 0) {
+    box10Lines.push(`${t.websites} (n = ${state.data.website_results || 0})`);
+    otherSourcesCount++;
+  }
+  if (!hideZero || (state.data.organisation_results || 0) > 0) {
+    box10Lines.push(`${t.organisations} (n = ${state.data.organisation_results || 0})`);
+    otherSourcesCount++;
+  }
+  if (!hideZero || (state.data.citations_results || 0) > 0) {
+    box10Lines.push(`${t.citations} (n = ${state.data.citations_results || 0})`);
+    otherSourcesCount++;
+  }
+  if (otherSourcesCount === 0) {
+    box10Lines.push(`(n = 0)`);
+  }
 
   // 11. Box 11: Reports sought for retrieval (Other track)
   const box11Lines = [
@@ -1286,7 +1583,9 @@ function renderDiagram() {
   const box14Lines = [t.reports_excluded];
   if (state.data.other_reasons && state.data.other_reasons.length > 0) {
     state.data.other_reasons.forEach(r => {
-      box14Lines.push(`${r.reason} (n = ${r.count})`);
+      if (!hideZero || r.count > 0 || state.data.other_reasons.length === 1) {
+        box14Lines.push(`${r.reason} (n = ${r.count})`);
+      }
     });
   } else {
     box14Lines.push(`Reason 1 (n = 0)`);
@@ -1398,7 +1697,7 @@ function renderDiagram() {
       `(n = ${state.data.previous_reports || 0})`
     ];
     const prevH = calcBoxHeight(prevLines);
-    el.push(drawBoxWhite(prevColX, r2Y, boxW, prevH, prevLines, th));
+    el.push(drawBoxWhite(prevColX, r2Y, boxW, prevH, prevLines, th, "inp-previous_studies", "sec-prev"));
 
     // Arrow from Previous box down and into Included Box
     const prevTargetY = r6Y + hBox9 / 2;
@@ -1418,18 +1717,18 @@ function renderDiagram() {
 
   // 4. ROW 2: IDENTIFICATION
   // Box 1 (Col 1): Records identified from Databases & Registers
-  el.push(drawBoxWhite(col1X, r2Y, boxW, hBox1, box1Lines, th));
+  el.push(drawBoxWhite(col1X, r2Y, boxW, hBox1, box1Lines, th, "container-specific-dbs", "sec-ident"));
 
   // Horizontal Arrow: Box 1 -> Box 2
   const r2MidY = r2Y + hBox1 / 2;
   el.push(drawArrow(col1X + boxW, r2MidY, col2X, r2MidY, th.arrowColor));
 
   // Box 2 (Col 2): Records removed before screening
-  el.push(drawBoxWhite(col2X, r2Y, boxW, hBox2, box2Lines, th));
+  el.push(drawBoxWhite(col2X, r2Y, boxW, hBox2, box2Lines, th, "container-pre-screen", "sec-screen"));
 
   // Box 10 (Col 3, Other Track): Records identified from other sources
   if (state.options.other) {
-    el.push(drawBoxGrey(col3X, r2Y, boxW, hBox10, box10Lines, th));
+    el.push(drawBoxGrey(col3X, r2Y, boxW, hBox10, box10Lines, th, "container-other-methods", "sec-ident"));
   }
 
   // 5. ROW 3: SCREENING
@@ -1437,14 +1736,14 @@ function renderDiagram() {
   el.push(drawArrow(col1X + boxW / 2, r2Y + hBox1, col1X + boxW / 2, r3Y, th.arrowColor));
 
   // Box 3 (Col 1): Records screened
-  el.push(drawBoxWhite(col1X, r3Y, boxW, hBox3, box3Lines, th));
+  el.push(drawBoxWhite(col1X, r3Y, boxW, hBox3, box3Lines, th, "inp-records_screened", "sec-screen"));
 
   // Horizontal Arrow: Box 3 -> Box 4
   const r3MidY = r3Y + hBox3 / 2;
   el.push(drawArrow(col1X + boxW, r3MidY, col2X, r3MidY, th.arrowColor));
 
-  // Box 4 (Col 2): Records excluded
-  el.push(drawBoxWhite(col2X, r3Y, boxW, hBox4, box4Lines, th));
+  // Box 4 (Col 2): Records excluded during screening
+  el.push(drawBoxWhite(col2X, r3Y, boxW, hBox4, box4Lines, th, "container-screening-reasons", "sec-screen"));
 
   // In Other Track: Arrow straight down from Box 10 past Row 3 down to Box 11 in Row 4!
   if (state.options.other) {
@@ -1456,26 +1755,26 @@ function renderDiagram() {
   el.push(drawArrow(col1X + boxW / 2, r3Y + hBox3, col1X + boxW / 2, r4Y, th.arrowColor));
 
   // Box 5 (Col 1): Reports sought for retrieval
-  el.push(drawBoxWhite(col1X, r4Y, boxW, hBox5, box5Lines, th));
+  el.push(drawBoxWhite(col1X, r4Y, boxW, hBox5, box5Lines, th, "inp-dbr_sought_reports", "sec-elig"));
 
   // Horizontal Arrow: Box 5 -> Box 6
   const r4MidY = r4Y + hBox5 / 2;
   el.push(drawArrow(col1X + boxW, r4MidY, col2X, r4MidY, th.arrowColor));
 
   // Box 6 (Col 2): Reports not retrieved
-  el.push(drawBoxWhite(col2X, r4Y, boxW, hBox6, box6Lines, th));
+  el.push(drawBoxWhite(col2X, r4Y, boxW, hBox6, box6Lines, th, "inp-dbr_notretrieved_reports", "sec-elig"));
 
   // Other Track Row 4
   if (state.options.other) {
     // Box 11 (Col 3): Reports sought for retrieval
-    el.push(drawBoxGrey(col3X, r4Y, boxW, hBox11, box11Lines, th));
+    el.push(drawBoxGrey(col3X, r4Y, boxW, hBox11, box11Lines, th, "inp-other_sought_reports", "sec-elig"));
 
     // Horizontal Arrow: Box 11 -> Box 12
     const r4OtherMidY = r4Y + hBox11 / 2;
     el.push(drawArrow(col3X + boxW, r4OtherMidY, col4X, r4OtherMidY, th.arrowColor));
 
     // Box 12 (Col 4): Reports not retrieved
-    el.push(drawBoxGrey(col4X, r4Y, boxW, hBox12, box12Lines, th));
+    el.push(drawBoxGrey(col4X, r4Y, boxW, hBox12, box12Lines, th, "inp-other_notretrieved_reports", "sec-elig"));
   }
 
   // 7. ROW 5: ASSESSED / ELIGIBILITY
@@ -1483,14 +1782,14 @@ function renderDiagram() {
   el.push(drawArrow(col1X + boxW / 2, r4Y + hBox5, col1X + boxW / 2, r5Y, th.arrowColor));
 
   // Box 7 (Col 1): Reports assessed for eligibility
-  el.push(drawBoxWhite(col1X, r5Y, boxW, hBox7, box7Lines, th));
+  el.push(drawBoxWhite(col1X, r5Y, boxW, hBox7, box7Lines, th, "inp-dbr_assessed", "sec-elig"));
 
   // Horizontal Arrow: Box 7 -> Box 8
   const r5MidY = r5Y + hBox7 / 2;
   el.push(drawArrow(col1X + boxW, r5MidY, col2X, r5MidY, th.arrowColor));
 
   // Box 8 (Col 2): Reports excluded with reasons
-  el.push(drawBoxWhite(col2X, r5Y, boxW, hBox8, box8Lines, th));
+  el.push(drawBoxWhite(col2X, r5Y, boxW, hBox8, box8Lines, th, "dbr-reasons-list", "sec-elig"));
 
   // Other Track Row 5
   if (state.options.other) {
@@ -1498,14 +1797,14 @@ function renderDiagram() {
     el.push(drawArrow(col3X + boxW / 2, r4Y + hBox11, col3X + boxW / 2, r5Y, th.arrowColor));
 
     // Box 13 (Col 3): Reports assessed for eligibility
-    el.push(drawBoxGrey(col3X, r5Y, boxW, hBox13, box13Lines, th));
+    el.push(drawBoxGrey(col3X, r5Y, boxW, hBox13, box13Lines, th, "inp-other_assessed", "sec-elig"));
 
     // Horizontal Arrow: Box 13 -> Box 14
     const r5OtherMidY = r5Y + hBox13 / 2;
     el.push(drawArrow(col3X + boxW, r5OtherMidY, col4X, r5OtherMidY, th.arrowColor));
 
     // Box 14 (Col 4): Reports excluded with reasons
-    el.push(drawBoxGrey(col4X, r5Y, boxW, hBox14, box14Lines, th));
+    el.push(drawBoxGrey(col4X, r5Y, boxW, hBox14, box14Lines, th, "other-reasons-list", "sec-elig"));
   }
 
   // 8. ROW 6: INCLUDED
@@ -1513,7 +1812,7 @@ function renderDiagram() {
   el.push(drawArrow(col1X + boxW / 2, r5Y + hBox7, col1X + boxW / 2, r6Y, th.arrowColor));
 
   // Box 9 (Col 1): New studies included in review
-  el.push(drawBoxWhite(col1X, r6Y, boxW, hBox9, box9Lines, th));
+  el.push(drawBoxWhite(col1X, r6Y, boxW, hBox9, box9Lines, th, "inp-new_studies", "sec-inc"));
 
   // Elbow Arrow from Box 13 (Other Track) to right edge of Box 9
   if (state.options.other) {
@@ -1536,7 +1835,7 @@ function renderDiagram() {
       `(n = ${state.data.total_reports_ma || 0})`
     ];
     el.push(drawArrow(col1X + boxW / 2, r6Y + hBox9, col1X + boxW / 2, r7Y, th.arrowColor));
-    el.push(drawBoxWhite(col1X, r7Y, boxW, r7Height, metaLines, th));
+    el.push(drawBoxWhite(col1X, r7Y, boxW, r7Height, metaLines, th, "inp-total_studies_ma", "sec-inc"));
   }
 
   svg.innerHTML = el.join("\n");
@@ -1572,8 +1871,8 @@ function drawStagePill(x, y, w, h, label, th) {
   `;
 }
 
-// Databases & Registers Track Box (White fill, 1px Black Border, Centered Text)
-function drawBoxWhite(x, y, w, h, lines, th) {
+// Databases & Registers Track Box (White fill, 1px Black Border, Centered Text, Clickable)
+function drawBoxWhite(x, y, w, h, lines, th, targetFieldId = "", sectionId = "") {
   const lineHeight = 13.5;
   const startY = y + (h - (lines.length - 1) * lineHeight) / 2 + 3.5;
 
@@ -1581,16 +1880,18 @@ function drawBoxWhite(x, y, w, h, lines, th) {
     return `<text x="${x + w / 2}" y="${startY + i * lineHeight}" fill="${th.textColor}" font-size="10" font-weight="400" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Arial, sans-serif">${escapeHtml(line)}</text>`;
   }).join("\n");
 
+  const clickAttr = targetFieldId ? `class="prisma-box-main clickable-box" data-target="${targetFieldId}" data-section="${sectionId}" title="Click to edit in form"` : `class="prisma-box-main"`;
+
   return `
-    <g class="prisma-box-main">
+    <g ${clickAttr}>
       <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${th.mainBoxBg}" stroke="${th.mainBoxBorder}" stroke-width="1.0" rx="0" />
       ${textTags}
     </g>
   `;
 }
 
-// Other Methods Track Box (Solid Light Grey #dcdcdc fill, NO border, Centered Text)
-function drawBoxGrey(x, y, w, h, lines, th) {
+// Other Methods Track Box (Solid Light Grey #dcdcdc fill, NO border, Centered Text, Clickable)
+function drawBoxGrey(x, y, w, h, lines, th, targetFieldId = "", sectionId = "") {
   const lineHeight = 13.5;
   const startY = y + (h - (lines.length - 1) * lineHeight) / 2 + 3.5;
 
@@ -1598,8 +1899,10 @@ function drawBoxGrey(x, y, w, h, lines, th) {
     return `<text x="${x + w / 2}" y="${startY + i * lineHeight}" fill="${th.textColor}" font-size="10" font-weight="400" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Arial, sans-serif">${escapeHtml(line)}</text>`;
   }).join("\n");
 
+  const clickAttr = targetFieldId ? `class="prisma-box-other clickable-box" data-target="${targetFieldId}" data-section="${sectionId}" title="Click to edit in form"` : `class="prisma-box-other"`;
+
   return `
-    <g class="prisma-box-other">
+    <g ${clickAttr}>
       <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${th.otherBoxBg}" stroke="none" rx="0" />
       ${textTags}
     </g>
