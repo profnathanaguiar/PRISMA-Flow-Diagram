@@ -1,0 +1,106 @@
+/* Estilos adicionais para PRISMA 2020 Web */
+
+@layer utilities {
+  .input-field {
+    @apply w-full text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition;
+  }
+}
+
+/* Tipografia e suavização de fontes */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Customização da barra de rolagem */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Animações */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.15s ease-out forwards;
+}
+
+.animate-scaleUp {
+  animation: scaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Abas ativas no Modal */
+.modal-tab.active-tab {
+  border-bottom-color: #4f46e5;
+  color: #4f46e5;
+  background-color: #ffffff;
+}
+
+/* Estilos de impressão e PDF */
+@media print {
+  header,
+  .lg\:col-span-5,
+  #cloud-modal,
+  #export-dropdown-container,
+  #btn-cloud-modal,
+  #save-status,
+  .bg-white.rounded-xl.shadow-sm.border.border-slate-200.p-3 {
+    display: none !important;
+  }
+
+  body {
+    background-color: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  main {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .lg\:col-span-7 {
+    width: 100% !important;
+  }
+
+  #diagram-viewport {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: auto !important;
+  }
+
+  #diagram-container {
+    transform: none !important;
+  }
+
+  svg#prisma-svg {
+    width: 100% !important;
+    height: auto !important;
+  }
+}
