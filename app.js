@@ -15,7 +15,9 @@ const state = {
     dbDetail: true,
     regDetail: false,
     metaAnalysis: false,
-    hideZero: true // Hide fields with n = 0 (e.g. Registers n = 0, unused automation)
+    hideZero: true, // Hide fields with n = 0 (e.g. Registers n = 0, unused automation)
+    includeNew: false, // Default false: "Studies included", "Identification of studies" (Original review)
+    showFootnotes: false // Default false: clean without * or **
   },
   data: {
     previous_studies: 0,
@@ -75,10 +77,13 @@ const i18n = {
     stage_ident: "Identification",
     stage_screen: "Screening",
     stage_inc: "Included",
-    header_db: "Identification of new studies via databases and registers",
-    header_other: "Identification of new studies via other methods",
+    header_db: "Identification of studies via databases and registers",
+    header_db_new: "Identification of new studies via databases and registers",
+    header_other: "Identification of studies via other methods",
+    header_other_new: "Identification of new studies via other methods",
     header_prev: "Previous studies",
-    rec_identified_from: "Records identified from*:",
+    rec_identified_from: "Records identified from:",
+    rec_identified_from_fn: "Records identified from*:",
     databases: "Databases",
     registers: "Registers",
     removed_before_screening: "Records removed before screening:",
@@ -86,7 +91,8 @@ const i18n = {
     auto_excluded: "Records marked as ineligible by automation tools",
     other_removed: "Records removed for other reasons",
     records_screened: "Records screened",
-    records_excluded: "Records excluded**",
+    records_excluded: "Records excluded",
+    records_excluded_fn: "Records excluded**",
     reports_sought: "Reports sought for retrieval",
     reports_not_retrieved: "Reports not retrieved",
     reports_assessed: "Reports assessed for eligibility",
@@ -94,7 +100,9 @@ const i18n = {
     websites: "Websites",
     organisations: "Organisations",
     citations: "Citation searching",
+    studies_inc: "Studies included in review",
     new_studies_inc: "New studies included in review",
+    reports_inc: "Reports of included studies",
     new_reports_inc: "Reports of new included studies",
     prev_studies_inc: "Studies included in previous version of review",
     prev_reports_inc: "Reports of studies included in previous version of review",
@@ -107,10 +115,13 @@ const i18n = {
     stage_ident: "Identificação",
     stage_screen: "Triagem",
     stage_inc: "Incluídos",
-    header_db: "Identificação de novos estudos através de bases de dados e registros",
-    header_other: "Identificação de novos estudos através de outros métodos",
+    header_db: "Identificação de estudos através de bases de dados e registros",
+    header_db_new: "Identificação de novos estudos através de bases de dados e registros",
+    header_other: "Identificação de estudos através de outros métodos",
+    header_other_new: "Identificação de novos estudos através de outros métodos",
     header_prev: "Estudos anteriores",
-    rec_identified_from: "Registros identificados em*:",
+    rec_identified_from: "Registros identificados em:",
+    rec_identified_from_fn: "Registros identificados em*:",
     databases: "Bases de dados",
     registers: "Registros de ensaios",
     removed_before_screening: "Registros removidos antes da triagem:",
@@ -118,7 +129,8 @@ const i18n = {
     auto_excluded: "Marcados como inelegíveis por ferramentas automatizadas",
     other_removed: "Removidos por outras razões",
     records_screened: "Registros triados",
-    records_excluded: "Registros excluídos**",
+    records_excluded: "Registros excluídos",
+    records_excluded_fn: "Registros excluídos**",
     reports_sought: "Relatórios buscados para recuperação",
     reports_not_retrieved: "Relatórios não recuperados",
     reports_assessed: "Relatórios avaliados para elegibilidade",
@@ -126,7 +138,9 @@ const i18n = {
     websites: "Websites",
     organisations: "Organizações",
     citations: "Busca em citações",
+    studies_inc: "Estudos incluídos na revisão",
     new_studies_inc: "Novos estudos incluídos na revisão",
+    reports_inc: "Relatórios de estudos incluídos",
     new_reports_inc: "Relatórios de novos estudos incluídos",
     prev_studies_inc: "Estudos incluídos na versão anterior da revisão",
     prev_reports_inc: "Relatórios de estudos na versão anterior da revisão",
@@ -208,6 +222,7 @@ function initApp() {
   renderFormLists();
   syncUIFromState();
   initPanAndZoom();
+  initProjectManagement();
   bindEvents();
   renderDiagram();
 
@@ -259,7 +274,11 @@ function loadSavedState() {
   const cloudProjects = localProjects.filter(p => p.key.startsWith("prisma2020_cloud_"));
   if (cloudProjects.length > 0) {
     const latestProj = cloudProjects[0];
+    currentActiveProject = latestProj.id;
+    updateActiveProjectLabel();
     showRecoveryBanner(latestProj);
+  } else {
+    updateActiveProjectLabel();
   }
 }
 
@@ -400,9 +419,15 @@ function loadProjectFromKey(key) {
   if (saved) {
     try {
       const loaded = JSON.parse(saved);
+      if (key.startsWith("prisma2020_cloud_")) {
+        currentActiveProject = key.replace("prisma2020_cloud_", "");
+      } else {
+        currentActiveProject = "revisao-nathan";
+      }
+      updateActiveProjectLabel();
       applyLoadedState(loaded);
       autoSave();
-      showToast(`Projeto restaurado com sucesso!`);
+      showToast(`Projeto '${currentActiveProject}' carregado com sucesso!`);
       document.getElementById("cloud-modal")?.classList.add("hidden");
     } catch (e) {
       alert("Erro ao ler dados do projeto.");
@@ -443,6 +468,148 @@ function restoreFromHashInput() {
   } catch (err) {
     alert("Código ou link inválido. Verifique se copiou o link completo com o #data=...");
   }
+}
+
+// =========================================================================
+// MULTI-PROJECT MANAGEMENT & 1-CLICK QUICK SAVE (FLOPPY DISK 💾)
+// =========================================================================
+let currentActiveProject = "revisao-nathan";
+
+function initProjectManagement() {
+  const btnProjMenu = document.getElementById("btn-project-menu");
+  const projMenu = document.getElementById("project-menu");
+  if (btnProjMenu && projMenu) {
+    btnProjMenu.addEventListener("click", (e) => {
+      e.stopPropagation();
+      renderHeaderProjectsList();
+      projMenu.classList.toggle("hidden");
+    });
+    document.addEventListener("click", (e) => {
+      if (!btnProjMenu.contains(e.target) && !projMenu.contains(e.target)) {
+        projMenu.classList.add("hidden");
+      }
+    });
+  }
+
+  // 1-Click Quick Save Floppy Disk
+  document.getElementById("btn-quick-save")?.addEventListener("click", quickSaveActiveProject);
+
+  // New Project Button in Dropdown
+  document.getElementById("btn-header-new-proj")?.addEventListener("click", () => {
+    projMenu?.classList.add("hidden");
+    createNewProject();
+  });
+
+  // Manage Projects in Header Dropdown
+  document.getElementById("btn-header-manage-projs")?.addEventListener("click", () => {
+    projMenu?.classList.add("hidden");
+    prepareCloudModal();
+    switchModalTab('cloud');
+    document.getElementById("cloud-modal")?.classList.remove("hidden");
+  });
+
+  updateActiveProjectLabel();
+}
+
+function updateActiveProjectLabel() {
+  const lbl = document.getElementById("label-active-project");
+  if (lbl) {
+    lbl.textContent = currentActiveProject || "Sem projeto";
+  }
+}
+
+function renderHeaderProjectsList() {
+  const listEl = document.getElementById("header-projects-list");
+  if (!listEl) return;
+
+  const projects = scanAndListLocalProjects();
+  if (projects.length === 0) {
+    listEl.innerHTML = `<div class="p-2.5 text-center text-xs text-slate-400">Nenhum projeto salvo encontrado.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = projects.map(p => {
+    const isCloudKey = p.key.startsWith("prisma2020_cloud_");
+    const projName = isCloudKey ? p.id : "Auto-save (Sessão)";
+    const isActive = isCloudKey && (p.id === currentActiveProject);
+    return `
+      <div class="flex items-center justify-between p-2 rounded-lg text-xs hover:bg-slate-100 cursor-pointer transition ${isActive ? 'bg-indigo-50 font-bold text-indigo-900 border border-indigo-200' : 'text-slate-700'}" data-header-proj-key="${p.key}">
+        <div class="flex items-center space-x-2 truncate flex-1 min-w-0">
+          <i class="fa-solid fa-${isActive ? 'folder-open text-indigo-600' : 'folder text-slate-400'}"></i>
+          <span class="truncate">${escapeHtml(projName)}</span>
+          <span class="text-[10px] text-slate-400 font-normal">(${p.total} arts)</span>
+        </div>
+        ${isActive ? '<i class="fa-solid fa-circle-check text-emerald-600 text-xs ml-1"></i>' : ''}
+      </div>
+    `;
+  }).join("");
+
+  listEl.querySelectorAll("[data-header-proj-key]").forEach(item => {
+    item.addEventListener("click", () => {
+      const key = item.getAttribute("data-header-proj-key");
+      loadProjectFromKey(key);
+      document.getElementById("project-menu")?.classList.add("hidden");
+    });
+  });
+}
+
+function quickSaveActiveProject() {
+  let projId = currentActiveProject;
+  if (!projId || projId === "Sem projeto" || projId === "Sessão Atual (Auto-save)") {
+    const entered = prompt("Digite o nome para salvar este projeto:", "revisao-nathan-2026");
+    if (!entered || !entered.trim()) return;
+    projId = entered.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+    currentActiveProject = projId;
+    updateActiveProjectLabel();
+  }
+
+  const payload = {
+    id: projId,
+    savedAt: new Date().toISOString(),
+    state: JSON.parse(JSON.stringify(state))
+  };
+
+  localStorage.setItem(`prisma2020_cloud_${projId}`, JSON.stringify(payload));
+  localStorage.setItem("prisma2020_nathan_state", JSON.stringify(state));
+
+  try {
+    const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(state));
+    history.replaceState(null, "", "#data=" + compressed);
+  } catch (e) {}
+
+  const btn = document.getElementById("btn-quick-save");
+  const txt = document.getElementById("txt-quick-save");
+  if (btn && txt) {
+    btn.classList.add("bg-emerald-700", "ring-2", "ring-emerald-400");
+    txt.innerHTML = `<i class="fa-solid fa-check text-emerald-200 mr-1"></i>Salvo!`;
+    setTimeout(() => {
+      btn.classList.remove("bg-emerald-700", "ring-2", "ring-emerald-400");
+      txt.textContent = "Salvar";
+    }, 1800);
+  }
+
+  showToast(`💾 Projeto '${projId}' salvo com sucesso!`);
+  renderSavedProjectsList();
+  renderHeaderProjectsList();
+}
+
+function createNewProject() {
+  const entered = prompt("Digite o nome do novo projeto:", "revisao-2");
+  if (!entered || !entered.trim()) return;
+  const newId = entered.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+
+  currentActiveProject = newId;
+  updateActiveProjectLabel();
+
+  const payload = {
+    id: newId,
+    savedAt: new Date().toISOString(),
+    state: JSON.parse(JSON.stringify(state))
+  };
+  localStorage.setItem(`prisma2020_cloud_${newId}`, JSON.stringify(payload));
+  showToast(`Novo projeto '${newId}' ativo!`);
+  renderSavedProjectsList();
+  renderHeaderProjectsList();
 }
 
 // AUTO-SAVE TO LOCALSTORAGE
@@ -487,6 +654,12 @@ function syncUIFromState() {
 
   const chkHideZero = document.getElementById("chk-hideZero");
   if (chkHideZero) chkHideZero.checked = state.options.hideZero !== false;
+
+  const chkIncludeNew = document.getElementById("chk-includeNew");
+  if (chkIncludeNew) chkIncludeNew.checked = !!state.options.includeNew;
+
+  const chkShowFootnotes = document.getElementById("chk-showFootnotes");
+  if (chkShowFootnotes) chkShowFootnotes.checked = !!state.options.showFootnotes;
 
   // Toggle conditional UI sections
   toggleConditionalCards();
@@ -851,6 +1024,8 @@ function bindEvents() {
   bindCheckbox("chk-regDetail", "regDetail");
   bindCheckbox("chk-metaAnalysis", "metaAnalysis");
   bindCheckbox("chk-hideZero", "hideZero");
+  bindCheckbox("chk-includeNew", "includeNew");
+  bindCheckbox("chk-showFootnotes", "showFootnotes");
 
   // Number Inputs
   const numberInputs = [
@@ -1319,7 +1494,10 @@ function saveCloudById() {
     state: JSON.parse(JSON.stringify(state))
   };
   localStorage.setItem(`prisma2020_cloud_${id}`, JSON.stringify(payload));
+  currentActiveProject = id;
+  updateActiveProjectLabel();
   renderSavedProjectsList();
+  renderHeaderProjectsList();
 
   const msg = document.getElementById("cloud-sync-msg");
   if (msg) {
@@ -1649,7 +1827,8 @@ function renderDiagram() {
 
   // 1. Box 1: Records identified from databases & registers
   // Cochrane Handbook & MECIR: n is the total number of articles/records retrieved
-  const box1Lines = [t.rec_identified_from];
+  const recIdentTitle = state.options.showFootnotes ? (t.rec_identified_from_fn || t.rec_identified_from) : t.rec_identified_from;
+  const box1Lines = [recIdentTitle];
   box1Lines.push(`${t.databases} (n = ${state.data.database_results || 0})`);
   if (state.options.dbDetail && state.data.databases && state.data.databases.length > 0) {
     state.data.databases.forEach(db => {
@@ -1695,8 +1874,9 @@ function renderDiagram() {
   ];
 
   // 4. Box 4: Records excluded during screening (Supports itemized reasons, e.g. Duplicates identified during screening)
+  const recExclTitle = state.options.showFootnotes ? (t.records_excluded_fn || t.records_excluded) : t.records_excluded;
   const box4Lines = [
-    t.records_excluded,
+    recExclTitle,
     `(n = ${state.data.records_excluded || 0})`
   ];
   if (state.data.screening_reasons && state.data.screening_reasons.length > 0) {
@@ -1737,11 +1917,13 @@ function renderDiagram() {
     box8Lines.push(`Reason 1 (n = 0)`);
   }
 
-  // 9. Box 9: New studies included in review
+  // 9. Box 9: Studies included in review (Supports non-new vs new wording)
+  const studiesIncText = (state.options.includeNew || state.options.previous) ? t.new_studies_inc : t.studies_inc;
+  const reportsIncText = (state.options.includeNew || state.options.previous) ? t.new_reports_inc : t.reports_inc;
   const box9Lines = [
-    t.new_studies_inc,
+    studiesIncText,
     `(n = ${state.data.new_studies || 0})`,
-    t.new_reports_inc,
+    reportsIncText,
     `(n = ${state.data.new_reports || 0})`
   ];
   if (state.options.previous) {
@@ -1919,11 +2101,13 @@ function renderDiagram() {
 
   // 3. TOP HEADERS
   // Header 1: Databases & Registers (Amber/Goldenrod pill spanning Col 1 and Col 2)
-  el.push(drawHeaderPill(col1X, r1Y, mainTrackWidth, headerHeight, t.header_db, th.headerDbBg, th.headerDbText));
+  const headerDbText = (state.options.includeNew || state.options.previous) ? (t.header_db_new || t.header_db) : t.header_db;
+  el.push(drawHeaderPill(col1X, r1Y, mainTrackWidth, headerHeight, headerDbText, th.headerDbBg, th.headerDbText));
 
   // Header 2: Other Methods (Grey pill spanning Col 3 and Col 4)
   if (state.options.other) {
-    el.push(drawHeaderPill(col3X, r1Y, otherTrackWidth, headerHeight, t.header_other, th.headerOtherBg, th.headerOtherText));
+    const headerOtherText = (state.options.includeNew || state.options.previous) ? (t.header_other_new || t.header_other) : t.header_other;
+    el.push(drawHeaderPill(col3X, r1Y, otherTrackWidth, headerHeight, headerOtherText, th.headerOtherBg, th.headerOtherText));
   }
 
   // 4. ROW 2: IDENTIFICATION
