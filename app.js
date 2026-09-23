@@ -217,8 +217,9 @@ function initApp() {
   }, 100);
 }
 
-// RESTORE STATE FROM URL HASH OR LOCAL STORAGE
+// RESTORE STATE FROM URL HASH, CLOUD OR LOCAL STORAGE
 function loadSavedState() {
+  // 1. Check URL Hash (#data=...)
   const hash = window.location.hash;
   if (hash && hash.startsWith("#data=")) {
     try {
@@ -226,8 +227,7 @@ function loadSavedState() {
       const jsonStr = LZString.decompressFromEncodedURIComponent(compressed);
       if (jsonStr) {
         const loaded = JSON.parse(jsonStr);
-        if (loaded.options) Object.assign(state.options, loaded.options);
-        if (loaded.data) Object.assign(state.data, loaded.data);
+        applyLoadedState(loaded);
         showToast("Flowchart state loaded from URL Link!");
         return;
       }
@@ -236,15 +236,212 @@ function loadSavedState() {
     }
   }
 
+  // 2. Scan for all saved projects in localStorage
+  const localProjects = scanAndListLocalProjects();
+
+  // 3. Check autosave session
+  let loadedFromAutosave = false;
   const localSaved = localStorage.getItem("prisma2020_nathan_state");
   if (localSaved) {
     try {
       const loaded = JSON.parse(localSaved);
-      if (loaded.options) Object.assign(state.options, loaded.options);
-      if (loaded.data) Object.assign(state.data, loaded.data);
+      const st = loaded.state || loaded;
+      if (st && st.data) {
+        applyLoadedState(st);
+        loadedFromAutosave = true;
+      }
     } catch (e) {
       console.warn("Error decoding localStorage state:", e);
     }
+  }
+
+  // 4. If saved projects exist (e.g. from Cloud Project ID), offer restoration banner
+  const cloudProjects = localProjects.filter(p => p.key.startsWith("prisma2020_cloud_"));
+  if (cloudProjects.length > 0) {
+    const latestProj = cloudProjects[0];
+    showRecoveryBanner(latestProj);
+  }
+}
+
+// APPLY LOADED STATE OBJECT TO RUNTIME STATE
+function applyLoadedState(loaded) {
+  const st = loaded.state || loaded;
+  if (st.options) Object.assign(state.options, st.options);
+  if (st.data) Object.assign(state.data, st.data);
+  renderFormLists();
+  syncUIFromState();
+  renderDiagram();
+  fitToScreen();
+}
+
+// SCAN ALL LOCAL STORAGE KEYS FOR PRISMA PROJECTS
+function scanAndListLocalProjects() {
+  const projects = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+
+      if (key.startsWith("prisma2020_cloud_")) {
+        const id = key.replace("prisma2020_cloud_", "");
+        try {
+          const val = JSON.parse(localStorage.getItem(key));
+          const st = val.state || val;
+          const total = (st.data?.database_results || 0) + (st.data?.register_results || 0);
+          projects.push({
+            key: key,
+            id: id,
+            savedAt: val.savedAt || null,
+            total: total,
+            state: st
+          });
+        } catch (e) {}
+      } else if (key === "prisma2020_nathan_state") {
+        try {
+          const val = JSON.parse(localStorage.getItem(key));
+          const st = val.state || val;
+          const total = (st.data?.database_results || 0) + (st.data?.register_results || 0);
+          projects.push({
+            key: key,
+            id: "Sessão Atual (Auto-save)",
+            savedAt: null,
+            total: total,
+            state: st
+          });
+        } catch (e) {}
+      }
+    }
+  } catch (err) {
+    console.warn("Error scanning localStorage:", err);
+  }
+
+  // Sort: Cloud projects first, then by date if available
+  projects.sort((a, b) => {
+    if (a.key.startsWith("prisma2020_cloud_") && !b.key.startsWith("prisma2020_cloud_")) return -1;
+    if (!a.key.startsWith("prisma2020_cloud_") && b.key.startsWith("prisma2020_cloud_")) return 1;
+    return 0;
+  });
+
+  return projects;
+}
+
+// SHOW TOP RECOVERY BANNER
+function showRecoveryBanner(project) {
+  const banner = document.getElementById("recovery-banner");
+  const bannerText = document.getElementById("recovery-banner-text");
+  if (!banner) return;
+
+  const totalStudies = project.total || 0;
+  const dateStr = project.savedAt ? ` em ${new Date(project.savedAt).toLocaleDateString()}` : "";
+  if (bannerText) {
+    bannerText.innerHTML = `<strong>Versão salva encontrada:</strong> Projeto <em>"${escapeHtml(project.id)}"</em> (${totalStudies} artigos recuperados${dateStr}).`;
+  }
+  banner.classList.remove("hidden");
+
+  const btnRestore = document.getElementById("btn-recovery-restore");
+  if (btnRestore) {
+    btnRestore.onclick = () => {
+      loadProjectFromKey(project.key);
+      banner.classList.add("hidden");
+    };
+  }
+
+  const btnDismiss = document.getElementById("btn-recovery-dismiss");
+  if (btnDismiss) {
+    btnDismiss.onclick = () => {
+      banner.classList.add("hidden");
+    };
+  }
+}
+
+// RENDER DETECTED PROJECTS IN CLOUD MODAL
+function renderSavedProjectsList() {
+  const listEl = document.getElementById("saved-projects-list");
+  if (!listEl) return;
+
+  const projects = scanAndListLocalProjects();
+  if (projects.length === 0) {
+    listEl.innerHTML = `
+      <div class="text-[11px] text-slate-400 p-2.5 text-center bg-slate-50 rounded-lg border border-dashed border-slate-200">
+        Nenhum projeto salvo encontrado neste navegador ainda.
+      </div>
+    `;
+    return;
+  }
+
+  listEl.innerHTML = projects.map(p => `
+    <div class="p-2.5 bg-white border border-slate-200 rounded-lg flex items-center justify-between shadow-xs hover:border-indigo-300 transition">
+      <div class="flex-1 min-w-0 mr-2">
+        <div class="flex items-center space-x-1.5">
+          <span class="font-bold text-xs text-slate-800 truncate">${escapeHtml(p.id)}</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-semibold">${p.total} artigos</span>
+        </div>
+        <div class="text-[10px] text-slate-400">
+          ${p.savedAt ? new Date(p.savedAt).toLocaleString() : 'Salvo localmente'}
+        </div>
+      </div>
+      <div class="flex items-center space-x-1.5 shrink-0">
+        <button type="button" class="btn-load-proj px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[11px] font-semibold transition" data-key="${p.key}">
+          Restaurar
+        </button>
+        ${p.key !== 'prisma2020_nathan_state' ? `
+          <button type="button" class="btn-del-proj p-1 text-slate-400 hover:text-rose-600 rounded transition" data-key="${p.key}" title="Excluir">
+            <i class="fa-solid fa-trash-can text-xs"></i>
+          </button>
+        ` : ''}
+      </div>
+    </div>
+  `).join("");
+}
+
+// LOAD PROJECT FROM SPECIFIC KEY
+function loadProjectFromKey(key) {
+  const saved = localStorage.getItem(key);
+  if (saved) {
+    try {
+      const loaded = JSON.parse(saved);
+      applyLoadedState(loaded);
+      autoSave();
+      showToast(`Projeto restaurado com sucesso!`);
+      document.getElementById("cloud-modal")?.classList.add("hidden");
+    } catch (e) {
+      alert("Erro ao ler dados do projeto.");
+    }
+  } else {
+    alert("Nenhum projeto encontrado com esta chave.");
+  }
+}
+
+// RESTORE FROM HASH / URL INPUT
+function restoreFromHashInput() {
+  const input = document.getElementById("inp-restore-hash");
+  if (!input) return;
+  let val = input.value.trim();
+  if (!val) {
+    alert("Por favor, cole um link ou código #data=...");
+    return;
+  }
+
+  let compressed = "";
+  if (val.includes("#data=")) {
+    compressed = val.split("#data=")[1];
+  } else if (val.startsWith("data=")) {
+    compressed = val.replace("data=", "");
+  } else {
+    compressed = val;
+  }
+
+  try {
+    const jsonStr = LZString.decompressFromEncodedURIComponent(compressed);
+    if (!jsonStr) throw new Error("Decompression failed");
+    const loaded = JSON.parse(jsonStr);
+    applyLoadedState(loaded);
+    autoSave();
+    showToast("Projeto restaurado com sucesso do link!");
+    document.getElementById("cloud-modal")?.classList.add("hidden");
+    input.value = "";
+  } catch (err) {
+    alert("Código ou link inválido. Verifique se copiou o link completo com o #data=...");
   }
 }
 
@@ -915,6 +1112,24 @@ function bindEvents() {
       renderDiagram();
       return;
     }
+
+    // 4. LOAD OR DELETE DETECTED PROJECTS
+    const btnLoadProj = e.target.closest(".btn-load-proj");
+    if (btnLoadProj) {
+      const key = btnLoadProj.getAttribute("data-key");
+      loadProjectFromKey(key);
+      return;
+    }
+    const btnDelProj = e.target.closest(".btn-del-proj");
+    if (btnDelProj) {
+      const key = btnDelProj.getAttribute("data-key");
+      if (confirm("Deseja realmente remover esta versão salva do navegador?")) {
+        localStorage.removeItem(key);
+        renderSavedProjectsList();
+        showToast("Versão excluída do armazenamento local.");
+      }
+      return;
+    }
   });
 
   // Automatic Sum Calculators
@@ -994,6 +1209,8 @@ function bindEvents() {
   // Save/Load Cloud ID
   document.getElementById("btn-save-cloud")?.addEventListener("click", saveCloudById);
   document.getElementById("btn-load-cloud")?.addEventListener("click", loadCloudById);
+  document.getElementById("btn-restore-hash")?.addEventListener("click", restoreFromHashInput);
+  document.getElementById("btn-refresh-projects")?.addEventListener("click", renderSavedProjectsList);
 
   // File Download / Upload
   document.getElementById("btn-download-json")?.addEventListener("click", downloadJsonProject);
@@ -1064,6 +1281,7 @@ function prepareCloudModal() {
   const fullUrl = `${window.location.origin}${window.location.pathname}#data=${compressed}`;
   const inp = document.getElementById("inp-cloud-url");
   if (inp) inp.value = fullUrl;
+  renderSavedProjectsList();
 }
 
 // SWITCH MODAL TABS
@@ -1082,6 +1300,9 @@ function switchModalTab(tab) {
       }
     }
   });
+  if (tab === 'cloud') {
+    renderSavedProjectsList();
+  }
 }
 
 // LOCALSTORAGE PROJECT ID SAVE & LOAD
@@ -1089,43 +1310,33 @@ function saveCloudById() {
   const idInput = document.getElementById("inp-cloud-id");
   const id = idInput?.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
   if (!id) {
-    alert("Please enter a project ID (e.g. nathan-review-2026)");
+    alert("Por favor, digite um nome/ID para o projeto (ex: revisao-nathan-2026)");
     return;
   }
-  localStorage.setItem(`prisma2020_cloud_${id}`, JSON.stringify(state));
+  const payload = {
+    id: id,
+    savedAt: new Date().toISOString(),
+    state: JSON.parse(JSON.stringify(state))
+  };
+  localStorage.setItem(`prisma2020_cloud_${id}`, JSON.stringify(payload));
+  renderSavedProjectsList();
+
   const msg = document.getElementById("cloud-sync-msg");
   if (msg) {
     msg.className = "text-xs font-semibold text-emerald-600 block";
-    msg.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> Project saved under ID: <strong>${id}</strong>!`;
+    msg.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> Projeto salvo com sucesso sob o ID: <strong>${id}</strong>!`;
   }
-  showToast(`Project saved with ID: ${id}`);
+  showToast(`Projeto '${id}' salvo com sucesso!`);
 }
 
 function loadCloudById() {
   const idInput = document.getElementById("inp-cloud-id");
   const id = idInput?.value.trim().toLowerCase();
   if (!id) {
-    alert("Please enter the project ID to load.");
+    alert("Por favor, digite o nome/ID do projeto para carregar.");
     return;
   }
-  const saved = localStorage.getItem(`prisma2020_cloud_${id}`);
-  if (saved) {
-    try {
-      const loaded = JSON.parse(saved);
-      if (loaded.options) Object.assign(state.options, loaded.options);
-      if (loaded.data) Object.assign(state.data, loaded.data);
-      renderFormLists();
-      syncUIFromState();
-      renderDiagram();
-      fitToScreen();
-      showToast(`Project '${id}' loaded successfully!`);
-      document.getElementById("cloud-modal")?.classList.add("hidden");
-    } catch (e) {
-      alert("Error parsing project file.");
-    }
-  } else {
-    alert(`No saved project found with ID '${id}'.`);
-  }
+  loadProjectFromKey(`prisma2020_cloud_${id}`);
 }
 
 // FILE DOWNLOAD / IMPORT (.json / .prisma / .csv)
