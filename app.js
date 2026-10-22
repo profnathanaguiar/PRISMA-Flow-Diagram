@@ -200,6 +200,22 @@ const themes = {
     otherBoxBorder: "#94a3b8",
     textColor: "#0f172a",
     arrowColor: "#1e40af"
+  },
+  scientific_teal: {
+    headerDbBg: "#014e62",
+    headerDbText: "#ffffff",
+    headerOtherBg: "#00ada0",
+    headerOtherText: "#ffffff",
+    headerPrevBg: "#e8eaec",
+    headerPrevText: "#00202b",
+    stageBadgeBg: "#e8eaec",
+    stageBadgeText: "#014e62",
+    mainBoxBg: "#ffffff",
+    mainBoxBorder: "#014e62",
+    otherBoxBg: "#e8eaec",
+    otherBoxBorder: "#00ada0",
+    textColor: "#00202b",
+    arrowColor: "#014e62"
   }
 };
 
@@ -2062,6 +2078,7 @@ function renderDiagram() {
         <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="${th.arrowColor}" />
       </marker>
     </defs>
+    <rect x="0" y="0" width="${totalWidth}" height="${totalHeight}" fill="#ffffff" />
   `);
 
   // 1. LEFT STAGE BADGES (Pill shaped, soft blue #adcbf0, vertical text rotated -90)
@@ -2285,7 +2302,7 @@ function drawBoxWhite(x, y, w, h, lines, th, targetFieldId = "", sectionId = "")
   `;
 }
 
-// Other Methods Track Box (Solid Light Grey #dcdcdc fill, NO border, Centered Text, Clickable)
+// Other Methods Track Box (Centered Text, Clickable)
 function drawBoxGrey(x, y, w, h, lines, th, targetFieldId = "", sectionId = "") {
   const lineHeight = 13.5;
   const startY = y + (h - (lines.length - 1) * lineHeight) / 2 + 3.5;
@@ -2295,10 +2312,12 @@ function drawBoxGrey(x, y, w, h, lines, th, targetFieldId = "", sectionId = "") 
   }).join("\n");
 
   const clickAttr = targetFieldId ? `class="prisma-box-other clickable-box" data-target="${targetFieldId}" data-section="${sectionId}" title="Click to edit in form"` : `class="prisma-box-other"`;
+  const strokeColor = (th.otherBoxBorder && th.otherBoxBorder !== "none") ? th.otherBoxBorder : "none";
+  const strokeWidthAttr = strokeColor !== "none" ? ` stroke-width="1.0"` : "";
 
   return `
     <g ${clickAttr}>
-      <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${th.otherBoxBg}" stroke="none" rx="0" />
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${th.otherBoxBg}" stroke="${strokeColor}"${strokeWidthAttr} rx="0" />
       ${textTags}
     </g>
   `;
