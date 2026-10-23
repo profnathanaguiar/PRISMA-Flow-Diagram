@@ -246,10 +246,334 @@ function initApp() {
   setTimeout(() => {
     fitToScreen();
   }, 100);
+
+  // Automatically synchronize with Cloud Storage on startup
+  syncFromCloudOnStartup();
+}
+
+// =========================================================================
+// REAL CLOUD SYNC ENGINE (DUAL-REDUNDANT: KEYVALUE CLOUD + BYTEBIN)
+// Works across file:// (Local) and https://*.github.io (GitHub Pages)
+// =========================================================================
+const CLOUD_KV_BASE = "https://keyvalue.immanuel.co/api/KeyVal";
+const CLOUD_APP_KEY = "fbgldz3q";
+const BYTEBIN_POST_URL = "https://bytebin.lucko.me/post";
+const BYTEBIN_GET_BASE = "https://bytebin.lucko.me/";
+const CLOUD_CHUNK_SIZE = 160;
+
+let hasLocalSavedData = false;
+let lastLoadedTimestamp = 0;
+let cloudSyncTimeout = null;
+let isSyncingCloud = false;
+
+function sanitizeCloudKey(id) {
+  return String(id || "revisao-nathan")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "_")
+    .slice(0, 32) || "revisao_nathan";
+}
+
+// Encode any string into 100% URL-path-safe alphanumeric [A-Za-z0-9_]
+function encodeCloudSafe(str) {
+  const lz = LZString.compressToEncodedURIComponent(str);
+  return lz.replace(/\+/g, "_A").replace(/-/g, "_B").replace(/\$/g, "_C");
+}
+
+function decodeCloudSafe(safeStr) {
+  if (!safeStr || typeof safeStr !== "string") return null;
+  const lz = safeStr.replace(/_A/g, "+").replace(/_B/g, "-").replace(/_C/g, "$");
+  return LZString.decompressFromEncodedURIComponent(lz);
+}
+
+async function kvGet(key) {
+  try {
+    const res = await fetch(`${CLOUD_KV_BASE}/GetValue/${CLOUD_APP_KEY}/${key}?_t=${Date.now()}`, {
+      method: "GET",
+      cache: "no-store"
+    });
+    if (!res.ok) return null;
+    const text = await res.text();
+    return text.replace(/^"|"$/g, "").trim() || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function kvSet(key, val) {
+  try {
+    const res = await fetch(`${CLOUD_KV_BASE}/UpdateValue/${CLOUD_APP_KEY}/${key}/${val}`, {
+      method: "POST",
+      body: ""
+    });
+    return res.ok;
+  } catch (e) {
+    return false;
+  }
+}
+
+function updateCloudBadge(status, text) {
+  const badge = document.getElementById("save-status");
+  if (!badge) return;
+  badge.classList.remove("hidden");
+  if (status === "syncing") {
+    badge.className = "flex items-center text-xs font-medium text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200 transition-all";
+    badge.innerHTML = `<i class="fa-solid fa-cloud-arrow-up mr-1.5 animate-bounce text-indigo-500"></i><span>${text || "Sincronizando nuvem..."}</span>`;
+  } else if (status === "synced") {
+    badge.className = "flex items-center text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 transition-all";
+    badge.innerHTML = `<i class="fa-solid fa-cloud mr-1.5 text-emerald-500"></i><span>${text || "Salvo na nuvem"}</span>`;
+  } else if (status === "local") {
+    badge.className = "flex items-center text-xs font-medium text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 transition-all";
+    badge.innerHTML = `<i class="fa-solid fa-hard-drive mr-1.5 text-amber-500"></i><span>${text || "Salvo localmente"}</span>`;
+  }
+}
+
+async function syncProjectToCloud(projId, payload, options = { silent: true }) {
+  const cleanId = (projId || currentActiveProject || "revisao-nathan").trim().toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+  const safeKey = sanitizeCloudKey(cleanId);
+  const jsonPayload = JSON.stringify(payload);
+
+  isSyncingCloud = true;
+  updateCloudBadge("syncing", "Sincronizando nuvem...");
+
+  try {
+    // 1. Upload full JSON to Bytebin (fast 1-request cloud document store)
+    let bytebinKey = "";
+    try {
+      const bbRes = await fetch(BYTEBIN_POST_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: jsonPayload
+      });
+      if (bbRes.ok) {
+        const bbData = await bbRes.json();
+        if (bbData && bbData.key) bytebinKey = bbData.key;
+      }
+    } catch (e) {}
+
+    // 2. Encode and split into URL-safe chunks for permanent KeyValue storage
+    const encoded = encodeCloudSafe(jsonPayload);
+    const chunks = [];
+    for (let i = 0; i < encoded.length; i += CLOUD_CHUNK_SIZE) {
+      chunks.push(encoded.slice(i, i + CLOUD_CHUNK_SIZE));
+    }
+
+    const chunkPromises = chunks.map((chunk, idx) => kvSet(`p_${safeKey}_${idx}`, chunk));
+    const chunkResults = await Promise.all(chunkPromises);
+    const allChunksOk = chunkResults.every(Boolean);
+
+    // 3. Save project metadata
+    const st = payload.state || payload;
+    const totalArticles = (st.data?.database_results || 0) + (st.data?.register_results || 0);
+    const savedAtMs = payload.savedAt ? new Date(payload.savedAt).getTime() : Date.now();
+    const metaObj = {
+      v: 1,
+      id: cleanId,
+      b: bytebinKey,
+      c: chunks.length,
+      t: savedAtMs,
+      n: totalArticles
+    };
+    const metaSaved = await kvSet(`p_${safeKey}_meta`, encodeCloudSafe(JSON.stringify(metaObj)));
+
+    // 4. Update active project pointer & cloud project list
+    await kvSet("prisma_active_proj", encodeCloudSafe(cleanId));
+    await registerProjectInCloudIndex(cleanId);
+
+    isSyncingCloud = false;
+    if (metaSaved || bytebinKey) {
+      updateCloudBadge("synced", "Salvo na nuvem ☁️");
+      if (!options.silent) {
+        showToast(`☁️ Projeto '${cleanId}' salvo e sincronizado na nuvem!`);
+      }
+      return true;
+    } else {
+      updateCloudBadge("local", "Salvo localmente");
+      return false;
+    }
+  } catch (err) {
+    isSyncingCloud = false;
+    updateCloudBadge("local", "Salvo localmente");
+    return false;
+  }
+}
+
+async function registerProjectInCloudIndex(projId) {
+  try {
+    let list = [projId];
+    const rawList = await kvGet("prisma_proj_list");
+    if (rawList) {
+      const decoded = decodeCloudSafe(rawList);
+      if (decoded) {
+        const parsed = JSON.parse(decoded);
+        if (Array.isArray(parsed)) {
+          list = Array.from(new Set([projId, ...parsed])).slice(0, 15);
+        }
+      }
+    }
+    const localProjs = scanAndListLocalProjects()
+      .filter(p => p.key.startsWith("prisma2020_cloud_"))
+      .map(p => p.id);
+    list = Array.from(new Set([projId, ...localProjs, ...list])).slice(0, 15);
+    await kvSet("prisma_proj_list", encodeCloudSafe(JSON.stringify(list)));
+  } catch (e) {}
+}
+
+async function fetchProjectMetaFromCloud(projId) {
+  const safeKey = sanitizeCloudKey(projId);
+  const rawMeta = await kvGet(`p_${safeKey}_meta`);
+  if (!rawMeta) return null;
+  try {
+    const decoded = decodeCloudSafe(rawMeta);
+    return decoded ? JSON.parse(decoded) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function fetchProjectFromCloud(projId, preloadedMeta = null) {
+  const safeKey = sanitizeCloudKey(projId);
+  const meta = preloadedMeta || (await fetchProjectMetaFromCloud(projId));
+  if (!meta) return null;
+
+  // 1. Try fast single-request fetch from Bytebin
+  if (meta.b) {
+    try {
+      const res = await fetch(`${BYTEBIN_GET_BASE}${meta.b}`, { method: "GET", cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && (data.state || data.data)) {
+          return data;
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 2. Fallback: Reassemble permanent chunks from KeyValue store
+  if (meta.c && meta.c > 0) {
+    try {
+      const chunkPromises = [];
+      for (let i = 0; i < meta.c; i++) {
+        chunkPromises.push(kvGet(`p_${safeKey}_${i}`));
+      }
+      const chunks = await Promise.all(chunkPromises);
+      if (chunks.every(Boolean)) {
+        const fullSafeStr = chunks.join("");
+        const jsonStr = decodeCloudSafe(fullSafeStr);
+        if (jsonStr) {
+          const parsed = JSON.parse(jsonStr);
+          if (parsed && (parsed.state || parsed.data)) {
+            return parsed;
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  return null;
+}
+
+async function syncFromCloudOnStartup() {
+  updateCloudBadge("syncing", "Sincronizando nuvem...");
+  try {
+    // 1. Discover cloud active project and cloud project list
+    const [rawActive, rawList] = await Promise.all([
+      kvGet("prisma_active_proj"),
+      kvGet("prisma_proj_list")
+    ]);
+
+    const cloudActiveProj = rawActive ? (decodeCloudSafe(rawActive) || "revisao-nathan") : currentActiveProject;
+    let cloudProjIds = ["revisao-nathan"];
+    if (rawList) {
+      try {
+        const parsed = JSON.parse(decodeCloudSafe(rawList));
+        if (Array.isArray(parsed)) cloudProjIds = parsed;
+      } catch (e) {}
+    }
+    cloudProjIds = Array.from(new Set([cloudActiveProj, currentActiveProject, ...cloudProjIds].filter(Boolean)));
+
+    // 2. Check cloud metadata for all known projects
+    let activeCloudPayload = null;
+    let activeCloudTime = 0;
+
+    for (const pid of cloudProjIds) {
+      const meta = await fetchProjectMetaFromCloud(pid);
+      if (!meta) continue;
+
+      const localKey = `prisma2020_cloud_${pid}`;
+      let localTime = 0;
+      try {
+        const localRaw = localStorage.getItem(localKey);
+        if (localRaw) {
+          const localParsed = JSON.parse(localRaw);
+          localTime = localParsed.savedAt ? new Date(localParsed.savedAt).getTime() : 0;
+        }
+      } catch (e) {}
+
+      // Download from cloud if local doesn't have it or cloud is newer
+      if (!localTime || (meta.t && meta.t > localTime)) {
+        const cloudPayload = await fetchProjectFromCloud(pid, meta);
+        if (cloudPayload) {
+          localStorage.setItem(localKey, JSON.stringify(cloudPayload));
+          if (pid === cloudActiveProj || pid === currentActiveProject) {
+            activeCloudPayload = cloudPayload;
+            activeCloudTime = meta.t || Date.now();
+          }
+        }
+      }
+    }
+
+    // 3. Decide whether to apply cloud state or push newer local state to cloud
+    if (activeCloudPayload && (!hasLocalSavedData || activeCloudTime > lastLoadedTimestamp)) {
+      currentActiveProject = activeCloudPayload.id || cloudActiveProj || "revisao-nathan";
+      localStorage.setItem("prisma2020_active_project", currentActiveProject);
+      localStorage.setItem("prisma2020_nathan_state", JSON.stringify(activeCloudPayload));
+      lastLoadedTimestamp = activeCloudTime;
+      hasLocalSavedData = true;
+
+      updateActiveProjectLabel();
+      applyLoadedState(activeCloudPayload);
+      updateUrlHashFromState(activeCloudPayload);
+      renderSavedProjectsList();
+      renderHeaderProjectsList();
+      updateCloudBadge("synced", "Sincronizado na nuvem ☁️");
+      showToast(`☁️ Dados do projeto '${currentActiveProject}' carregados da nuvem!`);
+      document.getElementById("recovery-banner")?.classList.add("hidden");
+    } else if (hasLocalSavedData) {
+      // Local has data that is newer or equal -> ensure it is pushed to cloud
+      const payload = {
+        id: currentActiveProject,
+        savedAt: new Date(lastLoadedTimestamp || Date.now()).toISOString(),
+        state: JSON.parse(JSON.stringify(state))
+      };
+      await syncProjectToCloud(currentActiveProject, payload, { silent: true });
+      renderSavedProjectsList();
+      renderHeaderProjectsList();
+    } else {
+      updateCloudBadge("synced", "Pronto (Nuvem ativa)");
+    }
+  } catch (err) {
+    console.warn("Cloud startup sync warning:", err);
+    updateCloudBadge("local", "Modo local");
+  }
+}
+
+function updateUrlHashFromState(payloadOrState) {
+  try {
+    const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(payloadOrState));
+    history.replaceState(null, "", "#data=" + compressed);
+  } catch (e) {}
 }
 
 // RESTORE STATE FROM URL HASH, CLOUD OR LOCAL STORAGE
 function loadSavedState() {
+  const savedActiveProj = localStorage.getItem("prisma2020_active_project");
+  if (savedActiveProj) {
+    currentActiveProject = savedActiveProj;
+  }
+
+  const candidates = [];
+
   // 1. Check URL Hash (#data=...)
   const hash = window.location.hash;
   if (hash && hash.startsWith("#data=")) {
@@ -258,44 +582,70 @@ function loadSavedState() {
       const jsonStr = LZString.decompressFromEncodedURIComponent(compressed);
       if (jsonStr) {
         const loaded = JSON.parse(jsonStr);
-        applyLoadedState(loaded);
-        showToast("Flowchart state loaded from URL Link!");
-        return;
+        const st = loaded.state || loaded;
+        if (st && st.data) {
+          const ts = loaded.savedAt ? new Date(loaded.savedAt).getTime() : 1;
+          candidates.push({
+            source: "hash",
+            id: loaded.id || currentActiveProject,
+            savedAt: ts,
+            payload: loaded
+          });
+        }
       }
     } catch (e) {
       console.warn("Error decoding URL data hash:", e);
     }
   }
 
-  // 2. Scan for all saved projects in localStorage
-  const localProjects = scanAndListLocalProjects();
-
-  // 3. Check autosave session
-  let loadedFromAutosave = false;
+  // 2. Check autosave session in localStorage
   const localSaved = localStorage.getItem("prisma2020_nathan_state");
   if (localSaved) {
     try {
       const loaded = JSON.parse(localSaved);
       const st = loaded.state || loaded;
       if (st && st.data) {
-        applyLoadedState(st);
-        loadedFromAutosave = true;
+        // Legacy format (saved directly as state without savedAt) was always the latest edit in that browser
+        const isLegacy = !loaded.savedAt && !!loaded.data;
+        const ts = loaded.savedAt ? new Date(loaded.savedAt).getTime() : (isLegacy ? Date.now() - 500 : 2);
+        candidates.push({
+          source: "autosave",
+          id: loaded.id || currentActiveProject,
+          savedAt: ts,
+          payload: isLegacy ? { id: currentActiveProject, savedAt: new Date(ts).toISOString(), state: st } : loaded
+        });
       }
     } catch (e) {
       console.warn("Error decoding localStorage state:", e);
     }
   }
 
-  // 4. If saved projects exist (e.g. from Cloud Project ID), offer restoration banner
+  // 3. Scan all saved projects in localStorage
+  const localProjects = scanAndListLocalProjects();
   const cloudProjects = localProjects.filter(p => p.key.startsWith("prisma2020_cloud_"));
-  if (cloudProjects.length > 0) {
-    const latestProj = cloudProjects[0];
-    currentActiveProject = latestProj.id;
-    updateActiveProjectLabel();
-    showRecoveryBanner(latestProj);
-  } else {
-    updateActiveProjectLabel();
+  cloudProjects.forEach(p => {
+    const ts = p.savedAt ? new Date(p.savedAt).getTime() : 3;
+    candidates.push({
+      source: "project",
+      id: p.id,
+      savedAt: ts,
+      payload: { id: p.id, savedAt: p.savedAt, state: p.state }
+    });
+  });
+
+  if (candidates.length > 0) {
+    // Pick the candidate with the newest timestamp
+    candidates.sort((a, b) => b.savedAt - a.savedAt);
+    const best = candidates[0];
+    hasLocalSavedData = true;
+    lastLoadedTimestamp = best.savedAt > 1000 ? best.savedAt : Date.now();
+    if (best.id && best.id !== "Sessão Atual (Auto-save)") {
+      currentActiveProject = best.id;
+    }
+    applyLoadedState(best.payload);
   }
+
+  updateActiveProjectLabel();
 }
 
 // APPLY LOADED STATE OBJECT TO RUNTIME STATE
@@ -350,11 +700,13 @@ function scanAndListLocalProjects() {
     console.warn("Error scanning localStorage:", err);
   }
 
-  // Sort: Cloud projects first, then by date if available
+  // Sort: Cloud projects first, then by most recent date descending
   projects.sort((a, b) => {
     if (a.key.startsWith("prisma2020_cloud_") && !b.key.startsWith("prisma2020_cloud_")) return -1;
     if (!a.key.startsWith("prisma2020_cloud_") && b.key.startsWith("prisma2020_cloud_")) return 1;
-    return 0;
+    const tA = a.savedAt ? new Date(a.savedAt).getTime() : 0;
+    const tB = b.savedAt ? new Date(b.savedAt).getTime() : 0;
+    return tB - tA;
   });
 
   return projects;
@@ -429,27 +781,46 @@ function renderSavedProjectsList() {
   `).join("");
 }
 
-// LOAD PROJECT FROM SPECIFIC KEY
-function loadProjectFromKey(key) {
+// LOAD PROJECT FROM SPECIFIC KEY (WITH CLOUD SYNC)
+async function loadProjectFromKey(key) {
+  let projId = key.startsWith("prisma2020_cloud_") ? key.replace("prisma2020_cloud_", "") : (currentActiveProject || "revisao-nathan");
+  let loaded = null;
+
+  // Check local first
   const saved = localStorage.getItem(key);
   if (saved) {
     try {
-      const loaded = JSON.parse(saved);
-      if (key.startsWith("prisma2020_cloud_")) {
-        currentActiveProject = key.replace("prisma2020_cloud_", "");
-      } else {
-        currentActiveProject = "revisao-nathan";
+      loaded = JSON.parse(saved);
+    } catch (e) {}
+  }
+
+  // Also check if Cloud has this project (or a newer version of it)
+  if (key.startsWith("prisma2020_cloud_")) {
+    try {
+      const cloudMeta = await fetchProjectMetaFromCloud(projId);
+      const localTime = loaded?.savedAt ? new Date(loaded.savedAt).getTime() : 0;
+      if (cloudMeta && (!loaded || (cloudMeta.t && cloudMeta.t > localTime))) {
+        const cloudData = await fetchProjectFromCloud(projId, cloudMeta);
+        if (cloudData) {
+          loaded = cloudData;
+          localStorage.setItem(key, JSON.stringify(cloudData));
+        }
       }
-      updateActiveProjectLabel();
-      applyLoadedState(loaded);
-      autoSave();
-      showToast(`Projeto '${currentActiveProject}' carregado com sucesso!`);
-      document.getElementById("cloud-modal")?.classList.add("hidden");
-    } catch (e) {
-      alert("Erro ao ler dados do projeto.");
-    }
+    } catch (e) {}
+  }
+
+  if (loaded) {
+    currentActiveProject = projId;
+    localStorage.setItem("prisma2020_active_project", currentActiveProject);
+    lastLoadedTimestamp = loaded.savedAt ? new Date(loaded.savedAt).getTime() : Date.now();
+    hasLocalSavedData = true;
+    updateActiveProjectLabel();
+    applyLoadedState(loaded);
+    autoSave();
+    showToast(`Projeto '${currentActiveProject}' carregado com sucesso!`);
+    document.getElementById("cloud-modal")?.classList.add("hidden");
   } else {
-    alert("Nenhum projeto encontrado com esta chave.");
+    alert("Nenhum projeto encontrado local ou na nuvem com esta chave.");
   }
 }
 
@@ -569,79 +940,116 @@ function renderHeaderProjectsList() {
   });
 }
 
-function quickSaveActiveProject() {
+async function quickSaveActiveProject() {
   let projId = currentActiveProject;
   if (!projId || projId === "Sem projeto" || projId === "Sessão Atual (Auto-save)") {
-    const entered = prompt("Digite o nome para salvar este projeto:", "revisao-nathan-2026");
+    const entered = prompt("Digite o nome para salvar este projeto:", "revisao-nathan");
     if (!entered || !entered.trim()) return;
     projId = entered.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
     currentActiveProject = projId;
     updateActiveProjectLabel();
   }
 
+  const nowIso = new Date().toISOString();
+  lastLoadedTimestamp = new Date(nowIso).getTime();
+  hasLocalSavedData = true;
+
   const payload = {
     id: projId,
-    savedAt: new Date().toISOString(),
+    savedAt: nowIso,
     state: JSON.parse(JSON.stringify(state))
   };
 
   localStorage.setItem(`prisma2020_cloud_${projId}`, JSON.stringify(payload));
-  localStorage.setItem("prisma2020_nathan_state", JSON.stringify(state));
-
-  try {
-    const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(state));
-    history.replaceState(null, "", "#data=" + compressed);
-  } catch (e) {}
+  localStorage.setItem("prisma2020_nathan_state", JSON.stringify(payload));
+  localStorage.setItem("prisma2020_active_project", projId);
+  updateUrlHashFromState(payload);
 
   const btn = document.getElementById("btn-quick-save");
   const txt = document.getElementById("txt-quick-save");
   if (btn && txt) {
     btn.classList.add("bg-emerald-700", "ring-2", "ring-emerald-400");
-    txt.innerHTML = `<i class="fa-solid fa-check text-emerald-200 mr-1"></i>Salvo!`;
+    txt.innerHTML = `<i class="fa-solid fa-cloud-arrow-up text-emerald-200 mr-1"></i>Salvando...`;
+  }
+
+  renderSavedProjectsList();
+  renderHeaderProjectsList();
+
+  const synced = await syncProjectToCloud(projId, payload, { silent: true });
+
+  if (btn && txt) {
+    txt.innerHTML = `<i class="fa-solid fa-check text-emerald-200 mr-1"></i>${synced ? "Salvo na nuvem!" : "Salvo!"}`;
     setTimeout(() => {
       btn.classList.remove("bg-emerald-700", "ring-2", "ring-emerald-400");
       txt.textContent = "Salvar";
-    }, 1800);
+    }, 2000);
   }
 
-  showToast(`💾 Projeto '${projId}' salvo com sucesso!`);
-  renderSavedProjectsList();
-  renderHeaderProjectsList();
+  showToast(synced
+    ? `☁️ Projeto '${projId}' salvo localmente e sincronizado na nuvem!`
+    : `💾 Projeto '${projId}' salvo localmente!`
+  );
 }
 
-function createNewProject() {
+async function createNewProject() {
   const entered = prompt("Digite o nome do novo projeto:", "revisao-2");
   if (!entered || !entered.trim()) return;
   const newId = entered.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
 
   currentActiveProject = newId;
+  localStorage.setItem("prisma2020_active_project", newId);
   updateActiveProjectLabel();
+
+  const nowIso = new Date().toISOString();
+  lastLoadedTimestamp = new Date(nowIso).getTime();
+  hasLocalSavedData = true;
 
   const payload = {
     id: newId,
-    savedAt: new Date().toISOString(),
+    savedAt: nowIso,
     state: JSON.parse(JSON.stringify(state))
   };
   localStorage.setItem(`prisma2020_cloud_${newId}`, JSON.stringify(payload));
-  showToast(`Novo projeto '${newId}' ativo!`);
+  localStorage.setItem("prisma2020_nathan_state", JSON.stringify(payload));
+  updateUrlHashFromState(payload);
+
   renderSavedProjectsList();
   renderHeaderProjectsList();
+  await syncProjectToCloud(newId, payload, { silent: false });
 }
 
-// AUTO-SAVE TO LOCALSTORAGE
+// AUTO-SAVE TO LOCALSTORAGE AND CLOUD
 let saveTimeout = null;
 function autoSave() {
   if (saveTimeout) clearTimeout(saveTimeout);
   saveTimeout = setTimeout(() => {
-    localStorage.setItem("prisma2020_nathan_state", JSON.stringify(state));
-    
-    // Update save indicator badge
-    const badge = document.getElementById("save-status");
-    if (badge) {
-      badge.classList.remove("hidden");
-      badge.innerHTML = `<i class="fa-solid fa-circle-check mr-1.5 text-emerald-500"></i><span>Saved locally</span>`;
-    }
-  }, 400);
+    const projId = (currentActiveProject && currentActiveProject !== "Sem projeto" && currentActiveProject !== "Sessão Atual (Auto-save)")
+      ? currentActiveProject
+      : "revisao-nathan";
+    currentActiveProject = projId;
+
+    const nowIso = new Date().toISOString();
+    lastLoadedTimestamp = new Date(nowIso).getTime();
+    hasLocalSavedData = true;
+
+    const payload = {
+      id: projId,
+      savedAt: nowIso,
+      state: JSON.parse(JSON.stringify(state))
+    };
+
+    localStorage.setItem("prisma2020_nathan_state", JSON.stringify(payload));
+    localStorage.setItem(`prisma2020_cloud_${projId}`, JSON.stringify(payload));
+    localStorage.setItem("prisma2020_active_project", projId);
+    updateUrlHashFromState(payload);
+    updateCloudBadge("local", "Salvo localmente");
+
+    // Debounced automatic Cloud Sync
+    if (cloudSyncTimeout) clearTimeout(cloudSyncTimeout);
+    cloudSyncTimeout = setTimeout(() => {
+      syncProjectToCloud(projId, payload, { silent: true });
+    }, 1200);
+  }, 300);
 }
 
 // SYNC FORM FIELDS FROM STATE
@@ -1401,7 +1809,10 @@ function bindEvents() {
   document.getElementById("btn-save-cloud")?.addEventListener("click", saveCloudById);
   document.getElementById("btn-load-cloud")?.addEventListener("click", loadCloudById);
   document.getElementById("btn-restore-hash")?.addEventListener("click", restoreFromHashInput);
-  document.getElementById("btn-refresh-projects")?.addEventListener("click", renderSavedProjectsList);
+  document.getElementById("btn-refresh-projects")?.addEventListener("click", async () => {
+    await syncFromCloudOnStartup();
+    renderSavedProjectsList();
+  });
 
   // File Download / Upload
   document.getElementById("btn-download-json")?.addEventListener("click", downloadJsonProject);
@@ -1468,10 +1879,22 @@ function toggleSection(sectionId) {
 
 // PREPARE CLOUD PERMANENT URL
 function prepareCloudModal() {
-  const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(state));
-  const fullUrl = `${window.location.origin}${window.location.pathname}#data=${compressed}`;
+  const payload = {
+    id: currentActiveProject || "revisao-nathan",
+    savedAt: new Date(lastLoadedTimestamp || Date.now()).toISOString(),
+    state: state
+  };
+  const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(payload));
+  const baseUrl = window.location.href.split("#")[0];
+  const fullUrl = `${baseUrl}#data=${compressed}`;
   const inp = document.getElementById("inp-cloud-url");
   if (inp) inp.value = fullUrl;
+
+  const idInput = document.getElementById("inp-cloud-id");
+  if (idInput && !idInput.value) {
+    idInput.value = currentActiveProject || "revisao-nathan";
+  }
+
   renderSavedProjectsList();
 }
 
@@ -1496,41 +1919,61 @@ function switchModalTab(tab) {
   }
 }
 
-// LOCALSTORAGE PROJECT ID SAVE & LOAD
-function saveCloudById() {
+// CLOUD & LOCALSTORAGE PROJECT ID SAVE & LOAD
+async function saveCloudById() {
   const idInput = document.getElementById("inp-cloud-id");
   const id = idInput?.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
   if (!id) {
     alert("Por favor, digite um nome/ID para o projeto (ex: revisao-nathan-2026)");
     return;
   }
+  const nowIso = new Date().toISOString();
+  lastLoadedTimestamp = new Date(nowIso).getTime();
+  hasLocalSavedData = true;
+
   const payload = {
     id: id,
-    savedAt: new Date().toISOString(),
+    savedAt: nowIso,
     state: JSON.parse(JSON.stringify(state))
   };
   localStorage.setItem(`prisma2020_cloud_${id}`, JSON.stringify(payload));
+  localStorage.setItem("prisma2020_nathan_state", JSON.stringify(payload));
+  localStorage.setItem("prisma2020_active_project", id);
   currentActiveProject = id;
   updateActiveProjectLabel();
+  updateUrlHashFromState(payload);
   renderSavedProjectsList();
   renderHeaderProjectsList();
 
   const msg = document.getElementById("cloud-sync-msg");
   if (msg) {
-    msg.className = "text-xs font-semibold text-emerald-600 block";
-    msg.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> Projeto salvo com sucesso sob o ID: <strong>${id}</strong>!`;
+    msg.className = "text-xs font-semibold text-indigo-600 block";
+    msg.innerHTML = `<i class="fa-solid fa-cloud-arrow-up animate-bounce mr-1"></i> Sincronizando projeto <strong>${escapeHtml(id)}</strong> na nuvem...`;
   }
-  showToast(`Projeto '${id}' salvo com sucesso!`);
+
+  const synced = await syncProjectToCloud(id, payload, { silent: false });
+  if (msg) {
+    msg.className = "text-xs font-semibold text-emerald-600 block";
+    msg.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> Projeto salvo ${synced ? "na nuvem e localmente" : "localmente"} sob o ID: <strong>${escapeHtml(id)}</strong>!`;
+  }
 }
 
-function loadCloudById() {
+async function loadCloudById() {
   const idInput = document.getElementById("inp-cloud-id");
-  const id = idInput?.value.trim().toLowerCase();
+  const id = idInput?.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
   if (!id) {
     alert("Por favor, digite o nome/ID do projeto para carregar.");
     return;
   }
-  loadProjectFromKey(`prisma2020_cloud_${id}`);
+  const msg = document.getElementById("cloud-sync-msg");
+  if (msg) {
+    msg.className = "text-xs font-semibold text-indigo-600 block";
+    msg.innerHTML = `<i class="fa-solid fa-cloud-arrow-down animate-bounce mr-1"></i> Buscando projeto <strong>${escapeHtml(id)}</strong> na nuvem...`;
+  }
+  await loadProjectFromKey(`prisma2020_cloud_${id}`);
+  if (msg) {
+    msg.classList.add("hidden");
+  }
 }
 
 // FILE DOWNLOAD / IMPORT (.json / .prisma / .csv)
