@@ -15,19 +15,19 @@
 </head>
 <body class="bg-slate-200 text-slate-800 antialiased min-h-screen flex flex-col font-sans">
 
-  <!-- BARRA DE NAVEGAÇÃO SUPERIOR -->
+  <!-- BARRA DE NAVEGAÇÃO SUPERIOR (Versão: Mark 3.1 - 2026-10-23) -->
   <header class="bg-white border-b border-slate-300 sticky top-0 z-40 shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <div class="w-full max-w-[1920px] mx-auto px-3 sm:px-4 lg:px-5 h-14 flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-lg bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center text-white shadow-md">
-          <i class="fa-solid fa-sitemap text-xl"></i>
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center text-white shadow-md">
+          <i class="fa-solid fa-sitemap text-lg"></i>
         </div>
         <div>
-          <h1 class="font-bold text-lg text-slate-900 leading-tight flex items-center gap-2">
+          <h1 class="font-bold text-base sm:text-lg text-slate-900 leading-tight flex items-center gap-2">
             PRISMA 2020 Flowchart
-            <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200">v2.1 Web</span>
+            <span id="app-version-badge" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold border border-slate-200 tracking-wide">Mark 3.4</span>
           </h1>
-          <p class="text-xs text-slate-500">Systematic Reviews Flow Diagram • Interactive & Cloud-Synced</p>
+          <p class="text-[11px] text-slate-500">Systematic Reviews Flow Diagram • Interactive & Cloud-Synced</p>
         </div>
       </div>
 
@@ -123,6 +123,9 @@
         <button id="btn-reset" title="Reset to default" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition">
           <i class="fa-solid fa-rotate-left"></i>
         </button>
+
+        <!-- Identificador Discreto de Versão no Canto Superior Direito -->
+        <span class="hidden sm:inline-block text-[10px] font-mono font-medium text-slate-400 pl-1 select-none" title="Versão atual da aplicação">Mark 3.4</span>
       </div>
     </div>
   </header>
@@ -143,11 +146,11 @@
     </div>
   </div>
 
-  <!-- CONTEÚDO PRINCIPAL -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+  <!-- CONTEÚDO PRINCIPAL (Full-Width Otimizado) -->
+  <main class="flex-1 w-full max-w-[1920px] mx-auto px-3 sm:px-4 lg:px-5 py-3 sm:py-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
 
-    <!-- COLUNA DA ESQUERDA: FORMULÁRIOS E DADOS (5 colunas) -->
-    <div class="lg:col-span-5 space-y-4">
+    <!-- COLUNA DA ESQUERDA: FORMULÁRIOS E DADOS -->
+    <div class="lg:col-span-5 xl:col-span-4 space-y-3.5">
 
       <!-- CARD 1: Configurações de Módulos e Opções -->
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -196,6 +199,13 @@
             <label class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 border border-slate-100 cursor-pointer">
               <span class="font-medium text-slate-700">Specific Registers Detail</span>
               <input type="checkbox" id="chk-regDetail" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+            </label>
+            <label class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 border border-slate-100 cursor-pointer">
+              <div>
+                <span class="font-medium text-slate-700">Data Extraction Stage (Exclusions during extraction)</span>
+                <span class="block text-[10px] text-slate-400">Separates eligibility assessment from exclusions during data extraction</span>
+              </div>
+              <input type="checkbox" id="chk-dataExtraction" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" checked>
             </label>
             <label class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 border border-slate-100 cursor-pointer">
               <span class="font-medium text-slate-700">Meta-analysis Section</span>
@@ -288,12 +298,12 @@
             </div>
 
             <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-              <span class="text-slate-500 font-medium">Total Records from Databases:</span>
+              <span class="text-slate-500 font-medium flex items-center gap-1">
+                Total Records from Databases:
+                <i id="lock-database_results" class="fa-solid fa-lock text-[10px] text-slate-400" title="Calculado automaticamente pela soma das bases"></i>
+              </span>
               <div class="flex items-center gap-2">
-                <button type="button" id="btn-sum-dbs" title="Calculate sum of databases" class="text-[11px] text-slate-500 hover:text-sky-600 underline">
-                  <i class="fa-solid fa-calculator"></i> Sum
-                </button>
-                <input type="number" id="inp-database_results" min="0" class="w-24 text-right font-bold text-slate-800 border border-slate-300 rounded px-2 py-1 bg-slate-50 focus:bg-white text-xs">
+                <input type="number" id="inp-database_results" min="0" readonly class="w-24 text-right font-bold text-slate-700 border border-slate-300 rounded px-2 py-1 bg-slate-100 cursor-not-allowed text-xs">
               </div>
             </div>
           </div>
@@ -313,11 +323,11 @@
               <!-- Linhas de registros dinâmicas -->
             </div>
             <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-              <span class="text-slate-500 font-medium">Total Records from Registers:</span>
+              <span class="text-slate-500 font-medium flex items-center gap-1">
+                Total Records from Registers:
+                <i id="lock-register_results" class="fa-solid fa-lock text-[10px] text-slate-400 hidden" title="Calculado automaticamente pela soma dos registros"></i>
+              </span>
               <div class="flex items-center gap-2">
-                <button type="button" id="btn-sum-regs" title="Calculate sum of registers" class="text-[11px] text-slate-500 hover:text-sky-600 underline">
-                  <i class="fa-solid fa-calculator"></i> Sum
-                </button>
                 <input type="number" id="inp-register_results" min="0" class="w-24 text-right font-bold text-slate-800 border border-slate-300 rounded px-2 py-1 bg-slate-50 focus:bg-white text-xs">
               </div>
             </div>
@@ -380,19 +390,23 @@
           <!-- Triagem de Títulos e Resumos -->
           <div id="container-screen-counts" class="pt-3 border-t border-slate-100 space-y-2">
             <div class="flex items-center justify-between">
-              <label class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Records Screened</label>
-              <button type="button" id="btn-calc-screened" title="Calculate screened: Total - Duplicates - Automation - Other" class="text-[11px] text-indigo-600 hover:text-indigo-800 underline">
-                <i class="fa-solid fa-calculator"></i> Auto-calculate
-              </button>
+              <label class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Records Screened & Excluded</label>
+              <span class="text-[10px] text-slate-400 flex items-center gap-1"><i class="fa-solid fa-lock text-[9px]"></i> Auto-calculated</span>
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Records Screened</label>
-                <input type="number" id="inp-records_screened" min="0" placeholder="0" class="input-field font-semibold text-slate-800">
+                <label class="block text-xs font-medium text-slate-600 mb-1 flex items-center justify-between">
+                  <span>Records Screened</span>
+                  <i class="fa-solid fa-lock text-[10px] text-slate-400" title="Calculado automaticamente: Identificados - Removidos antes da triagem"></i>
+                </label>
+                <input type="number" id="inp-records_screened" min="0" readonly class="input-field font-semibold text-slate-700 bg-slate-100 cursor-not-allowed">
               </div>
               <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Records Excluded (Total)</label>
-                <input type="number" id="inp-records_excluded" min="0" placeholder="0" class="input-field font-semibold text-rose-600">
+                <label class="block text-xs font-medium text-slate-600 mb-1 flex items-center justify-between">
+                  <span>Records Excluded (Total)</span>
+                  <i id="lock-records_excluded" class="fa-solid fa-lock text-[10px] text-slate-400" title="Calculado automaticamente pela soma dos motivos de exclusão na triagem"></i>
+                </label>
+                <input type="number" id="inp-records_excluded" min="0" readonly class="input-field font-semibold text-rose-600 bg-slate-100 cursor-not-allowed">
               </div>
             </div>
           </div>
@@ -405,7 +419,7 @@
                   <i class="fa-solid fa-copy text-rose-500"></i>
                   Screening Exclusion Reasons
                 </label>
-                <span class="text-[10px] text-slate-400">Itemize exclusions during title/abstract screening</span>
+                <span class="text-[10px] text-slate-400">Itemize exclusions during title/abstract screening (sums automatically)</span>
               </div>
               <button type="button" id="btn-add-screen-reason" class="text-xs font-semibold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-md transition flex items-center gap-1">
                 <i class="fa-solid fa-plus text-[10px]"></i> Add Reason
@@ -415,13 +429,6 @@
             
             <div id="screening-reasons-list" class="space-y-2">
               <!-- Linhas de motivos durante a triagem -->
-            </div>
-
-            <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-              <span class="text-slate-500 font-medium">Sum into Total Excluded:</span>
-              <button type="button" id="btn-sum-screen-reasons" title="Calculate sum into Records Excluded" class="text-[11px] text-indigo-600 hover:text-indigo-800 underline">
-                <i class="fa-solid fa-calculator"></i> Update Total Excluded
-              </button>
             </div>
           </div>
         </div>
@@ -440,8 +447,11 @@
           <!-- Recuperação de Relatórios de Bases -->
           <div id="container-dbr-retrieval" class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">Reports Sought for Retrieval</label>
-              <input type="number" id="inp-dbr_sought_reports" min="0" placeholder="0" class="input-field">
+              <label class="block text-xs font-medium text-slate-600 mb-1 flex items-center justify-between">
+                <span>Reports Sought for Retrieval</span>
+                <i class="fa-solid fa-lock text-[10px] text-slate-400" title="Calculado automaticamente: Records Screened - Records Excluded"></i>
+              </label>
+              <input type="number" id="inp-dbr_sought_reports" min="0" readonly class="input-field font-semibold text-slate-700 bg-slate-100 cursor-not-allowed">
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-600 mb-1">Reports Not Retrieved</label>
@@ -450,24 +460,71 @@
           </div>
 
           <div id="container-dbr-assessed">
-            <label class="block text-xs font-medium text-slate-600 mb-1">Reports Assessed for Eligibility</label>
-            <input type="number" id="inp-dbr_assessed" min="0" placeholder="0" class="input-field font-semibold">
+            <label class="block text-xs font-medium text-slate-600 mb-1 flex items-center justify-between">
+              <span>Reports Assessed for Eligibility</span>
+              <i class="fa-solid fa-lock text-[10px] text-slate-400" title="Calculado automaticamente: Reports Sought - Reports Not Retrieved"></i>
+            </label>
+            <input type="number" id="inp-dbr_assessed" min="0" readonly class="input-field font-semibold text-slate-700 bg-slate-100 cursor-not-allowed">
           </div>
 
-          <!-- Motivos de Exclusão Dinâmicos (Bases) -->
+          <!-- Motivos de Exclusão Dinâmicos na Elegibilidade (Bases) -->
           <div id="container-dbr-reasons" class="pt-3 border-t border-slate-100 space-y-2">
             <div class="flex items-center justify-between">
               <label class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                 <i class="fa-solid fa-ban text-rose-500"></i>
-                Reports Excluded by Reason (Databases & Registers)
+                Reports Excluded in Eligibility (Databases & Registers)
               </label>
               <button type="button" id="btn-add-dbr-reason" class="text-xs font-semibold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-md transition flex items-center gap-1">
                 <i class="fa-solid fa-plus text-[10px]"></i> Add Reason
               </button>
             </div>
-            <p class="text-[11px] text-slate-500">Add individual reasons and counts with no tricky formatting needed.</p>
+            <p class="text-[11px] text-slate-500">Exclusions during full-text eligibility assessment (before data extraction).</p>
             <div id="dbr-reasons-list" class="space-y-2">
               <!-- Linhas de motivos dinâmicas -->
+            </div>
+            <div id="summary-dbr-included" class="flex items-center justify-between pt-1.5 text-[11px] text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200">
+              <span>Excluded in Eligibility: <strong id="lbl-dbr-excluded-sum" class="text-rose-600">0</strong></span>
+              <span id="lbl-dbr-after-elig-caption">Advancing: <strong id="lbl-dbr-included-net" class="text-indigo-700">0</strong> reports</span>
+            </div>
+          </div>
+
+          <!-- Etapa de Extração de Dados e Exclusões Durante a Extração (Condicional, Ativo por Padrão) -->
+          <div id="sec-elig-extraction" class="pt-3 border-t border-slate-200 space-y-3 bg-indigo-50/40 -mx-4 px-4 py-3">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
+                <i class="fa-solid fa-table-list text-indigo-600"></i>
+                Data Extraction Stage (Databases & Registers)
+              </label>
+              <span class="text-[10px] text-indigo-600 font-semibold bg-indigo-100 px-2 py-0.5 rounded-full">Step 3.2</span>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1 flex items-center justify-between">
+                <span>Reports Included in Data Extraction</span>
+                <i class="fa-solid fa-lock text-[10px] text-slate-400" title="Calculado automaticamente: Elegíveis das Bases + Elegíveis de Outros Métodos"></i>
+              </label>
+              <input type="number" id="inp-dbr_extraction_assessed" min="0" readonly class="input-field font-semibold text-indigo-900 bg-slate-100 cursor-not-allowed">
+              <span id="lbl-extraction-formula" class="block text-[10px] text-indigo-700 mt-1 font-medium">Auto: 0 (Databases) + 0 (Other Methods) = 0 reports</span>
+            </div>
+
+            <div class="space-y-2 pt-1">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <i class="fa-solid fa-filter-circle-xmark text-rose-500"></i>
+                  Reports Excluded During Data Extraction
+                </label>
+                <button type="button" id="btn-add-extraction-reason" class="text-xs font-semibold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-md transition flex items-center gap-1">
+                  <i class="fa-solid fa-plus text-[10px]"></i> Add Reason
+                </button>
+              </div>
+              <p class="text-[11px] text-slate-500">Itemize reasons for reports excluded during the data extraction phase.</p>
+              <div id="extraction-reasons-list" class="space-y-2">
+                <!-- Linhas de motivos de exclusão durante extração -->
+              </div>
+              <div class="flex items-center justify-between pt-1.5 text-[11px] text-slate-600 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
+                <span>Excluded in Extraction: <strong id="lbl-extraction-excluded-sum" class="text-rose-600">0</strong></span>
+                <span>Final Included from Databases: <strong id="lbl-extraction-included-net" class="text-emerald-700">0</strong> reports</span>
+              </div>
             </div>
           </div>
 
@@ -476,16 +533,22 @@
             <label class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Reports from Other Methods</label>
             <div class="grid grid-cols-3 gap-2">
               <div>
-                <label class="block text-[11px] text-slate-500 mb-1">Sought</label>
-                <input type="number" id="inp-other_sought_reports" min="0" placeholder="0" class="input-field text-xs">
+                <label class="block text-[11px] text-slate-500 mb-1 flex items-center justify-between">
+                  <span>Sought</span>
+                  <i class="fa-solid fa-lock text-[9px] text-slate-400" title="Calculado automaticamente: Websites + Organisations + Citations"></i>
+                </label>
+                <input type="number" id="inp-other_sought_reports" min="0" readonly class="input-field text-xs font-semibold text-slate-700 bg-slate-100 cursor-not-allowed">
               </div>
               <div>
                 <label class="block text-[11px] text-slate-500 mb-1">Not retrieved</label>
                 <input type="number" id="inp-other_notretrieved_reports" min="0" placeholder="0" class="input-field text-xs">
               </div>
               <div>
-                <label class="block text-[11px] text-slate-500 mb-1">Assessed</label>
-                <input type="number" id="inp-other_assessed" min="0" placeholder="0" class="input-field text-xs">
+                <label class="block text-[11px] text-slate-500 mb-1 flex items-center justify-between">
+                  <span>Assessed</span>
+                  <i class="fa-solid fa-lock text-[9px] text-slate-400" title="Calculado automaticamente: Sought - Not retrieved"></i>
+                </label>
+                <input type="number" id="inp-other_assessed" min="0" readonly class="input-field text-xs font-semibold text-slate-700 bg-slate-100 cursor-not-allowed">
               </div>
             </div>
 
@@ -501,6 +564,10 @@
               </div>
               <div id="other-reasons-list" class="space-y-2">
                 <!-- Motivos de outras fontes -->
+              </div>
+              <div id="summary-other-included" class="flex items-center justify-between pt-1.5 text-[11px] text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200">
+                <span>Excluded: <strong id="lbl-other-excluded-sum" class="text-rose-600">0</strong></span>
+                <span>Included from Other Methods: <strong id="lbl-other-included-net" class="text-emerald-700">0</strong> reports</span>
               </div>
             </div>
           </div>
@@ -520,12 +587,17 @@
         <div id="sec-inc" class="p-4 space-y-3">
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">New studies included</label>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Studies included in review</label>
               <input type="number" id="inp-new_studies" min="0" placeholder="0" class="input-field font-semibold text-emerald-700">
+              <span class="block text-[10px] text-slate-400 mt-1">Editável (ex: vários artigos do mesmo estudo)</span>
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">Reports of new studies</label>
-              <input type="number" id="inp-new_reports" min="0" placeholder="0" class="input-field font-semibold text-emerald-700">
+              <label class="block text-xs font-medium text-slate-600 mb-1 flex items-center justify-between">
+                <span>Reports of included studies</span>
+                <i class="fa-solid fa-lock text-[10px] text-slate-400" title="Calculado automaticamente: Incluídos da via principal + Incluídos de outros métodos"></i>
+              </label>
+              <input type="number" id="inp-new_reports" min="0" readonly class="input-field font-semibold text-emerald-700 bg-slate-100 cursor-not-allowed">
+              <span id="lbl-reports-formula" class="block text-[10px] text-slate-500 mt-1 font-medium">Auto: 0 (Main) + 0 (Other) = 0</span>
             </div>
           </div>
 
@@ -534,12 +606,18 @@
             <label class="text-xs font-bold text-slate-700 uppercase tracking-wider block">Total Studies Included in Review</label>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Total Studies</label>
-                <input type="number" id="inp-total_studies" min="0" placeholder="0" class="input-field font-bold text-slate-800">
+                <label class="block text-xs font-medium text-slate-600 mb-1 flex items-center justify-between">
+                  <span>Total Studies</span>
+                  <i class="fa-solid fa-lock text-[10px] text-slate-400" title="Calculado automaticamente: Estudos anteriores + Novos estudos"></i>
+                </label>
+                <input type="number" id="inp-total_studies" min="0" readonly class="input-field font-bold text-slate-700 bg-slate-100 cursor-not-allowed">
               </div>
               <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Total Reports</label>
-                <input type="number" id="inp-total_reports" min="0" placeholder="0" class="input-field font-bold text-slate-800">
+                <label class="block text-xs font-medium text-slate-600 mb-1 flex items-center justify-between">
+                  <span>Total Reports</span>
+                  <i class="fa-solid fa-lock text-[10px] text-slate-400" title="Calculado automaticamente: Relatórios anteriores + Novos relatórios"></i>
+                </label>
+                <input type="number" id="inp-total_reports" min="0" readonly class="input-field font-bold text-slate-700 bg-slate-100 cursor-not-allowed">
               </div>
             </div>
           </div>
@@ -563,11 +641,11 @@
 
     </div>
 
-    <!-- COLUNA DA DIREITA: PREVIEW DO FLUXOGRAMA (7 colunas) -->
-    <div class="lg:col-span-7 flex flex-col space-y-3">
+    <!-- COLUNA DA DIREITA: PREVIEW DO FLUXOGRAMA (Área expandida e fixa ao rolar) -->
+    <div class="lg:col-span-7 xl:col-span-8 flex flex-col space-y-2.5 lg:sticky lg:top-[68px]">
       
       <!-- Barra de Controle do Visualizador com Pan & Zoom Hints -->
-      <div class="bg-white rounded-xl shadow-sm border border-slate-200 px-4 py-2.5 flex items-center justify-between">
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 px-4 py-2 flex items-center justify-between">
         <div class="flex items-center space-x-2">
           <span class="text-xs font-semibold text-slate-700 uppercase tracking-wider">Preview (PRISMA 2020)</span>
           <span class="text-[11px] text-indigo-600 font-medium hidden sm:inline">• 👆 Clique numa caixa para editar • ✋ Arraste • 🔍 Zoom</span>
@@ -590,7 +668,7 @@
       </div>
 
       <!-- Container do Viewport com Pan e Drag -->
-      <div id="diagram-viewport" class="bg-slate-50/70 rounded-xl shadow-inner border border-slate-200 min-h-[700px] h-[calc(100vh-160px)] overflow-hidden relative select-none cursor-grab active:cursor-grabbing">
+      <div id="diagram-viewport" class="bg-slate-50/70 rounded-xl shadow-inner border border-slate-200 min-h-[640px] h-[calc(100vh-140px)] overflow-hidden relative select-none cursor-grab active:cursor-grabbing">
         <div id="diagram-container" class="absolute left-0 top-0 origin-top-left transition-none">
           <!-- O SVG é inserido e atualizado aqui dinamicamente pelo renderizador -->
           <svg id="prisma-svg" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-sm bg-white"></svg>

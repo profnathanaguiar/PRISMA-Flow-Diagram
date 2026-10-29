@@ -1,5 +1,6 @@
 /**
- * PRISMA 2020 Flowchart Generator
+ * PRISMA 2020 Flowchart Generator • Version: Mark 3.4 (2026-10-23)
+ * Versioning rule: Same day -> Mark 3.1, 3.2, 3.3, 3.4... | Different days -> Mark 4, Mark 5...
  * Modern Standalone Web App for PRISMA 2020 Flow Diagrams
  * Designed for Nathan - Systematic Review
  * Compliant with Cochrane Handbook (4.6.1), PRISMA 2020 & MECIR (C44)
@@ -9,11 +10,12 @@
 const state = {
   options: {
     lang: 'en', // Default English as requested for research
-    theme: 'official', // 'official', 'classic', 'modern_blue'
+    theme: 'official', // 'official', 'classic', 'modern_blue', 'scientific_teal'
     previous: false,
     other: true,
     dbDetail: true,
     regDetail: false,
+    dataExtraction: true, // Separate stage for exclusions during data extraction
     metaAnalysis: false,
     hideZero: true, // Hide fields with n = 0 (e.g. Registers n = 0, unused automation)
     includeNew: false, // Default false: "Studies included", "Identification of studies" (Original review)
@@ -41,33 +43,37 @@ const state = {
     excluded_automatic: 25,
     excluded_other: 10,
     records_screened: 875,
-    records_excluded: 715,
+    records_excluded: 727,
     screening_reasons: [
       { reason: "Duplicates identified during screening", count: 15 },
-      { reason: "Ineligible study design or population", count: 700 }
+      { reason: "Ineligible study design or population", count: 712 }
     ],
-    dbr_sought_reports: 160,
+    dbr_sought_reports: 148,
     dbr_notretrieved_reports: 12,
-    dbr_assessed: 148,
+    dbr_assessed: 136,
     dbr_reasons: [
-      { reason: "Incompatible population criteria", count: 48 },
-      { reason: "Intervention not assessed", count: 35 },
-      { reason: "Inappropriate study design (non-RCT)", count: 26 },
-      { reason: "Primary outcomes not reported", count: 14 }
+      { reason: "Incompatible population criteria", count: 32 },
+      { reason: "Intervention not assessed", count: 24 },
+      { reason: "Inappropriate study design (non-RCT)", count: 22 }
+    ],
+    dbr_extraction_assessed: 58,
+    extraction_reasons: [
+      { reason: "Insufficient outcome data during extraction", count: 30 },
+      { reason: "Overlapping cohort / duplicate report", count: 20 }
     ],
     other_sought_reports: 80,
     other_notretrieved_reports: 5,
     other_assessed: 75,
     other_reasons: [
       { reason: "Inclusion criteria not met", count: 42 },
-      { reason: "Insufficient data for synthesis", count: 18 }
+      { reason: "Insufficient data for synthesis", count: 33 }
     ],
-    new_studies: 25,
-    new_reports: 31,
-    total_studies: 25,
-    total_reports: 31,
-    total_studies_ma: 18,
-    total_reports_ma: 22
+    new_studies: 8,
+    new_reports: 8,
+    total_studies: 8,
+    total_reports: 8,
+    total_studies_ma: 8,
+    total_reports_ma: 8
   }
 };
 
@@ -97,6 +103,8 @@ const i18n = {
     reports_not_retrieved: "Reports not retrieved",
     reports_assessed: "Reports assessed for eligibility",
     reports_excluded: "Reports excluded:",
+    reports_extraction_assessed: "Reports included in data extraction",
+    reports_extraction_excluded: "Reports excluded during data extraction:",
     websites: "Websites",
     organisations: "Organisations",
     citations: "Citation searching",
@@ -135,6 +143,8 @@ const i18n = {
     reports_not_retrieved: "Relatórios não recuperados",
     reports_assessed: "Relatórios avaliados para elegibilidade",
     reports_excluded: "Relatórios excluídos:",
+    reports_extraction_assessed: "Relatórios incluídos na extração de dados",
+    reports_extraction_excluded: "Relatórios excluídos na extração de dados:",
     websites: "Websites",
     organisations: "Organizações",
     citations: "Busca em citações",
@@ -1052,8 +1062,157 @@ function autoSave() {
   }, 300);
 }
 
+// AUTOMATIC PRISMA MATHEMATICAL CONSISTENCY ENGINE
+function setInputLockState(inputId, lockIconId, isLocked) {
+  const inp = document.getElementById(inputId);
+  const lockIcon = lockIconId ? document.getElementById(lockIconId) : null;
+  if (inp) {
+    inp.readOnly = isLocked;
+    if (isLocked) {
+      inp.classList.add("bg-slate-100", "cursor-not-allowed", "text-slate-700");
+      inp.classList.remove("bg-white", "bg-slate-50");
+    } else {
+      inp.classList.remove("bg-slate-100", "cursor-not-allowed", "text-slate-700");
+      inp.classList.add("bg-white");
+    }
+  }
+  if (lockIcon) {
+    lockIcon.classList.toggle("hidden", !isLocked);
+  }
+}
+
+function recalculateFlowMath() {
+  if (!state.data.databases) state.data.databases = [];
+  if (!state.data.registers) state.data.registers = [];
+  if (!state.data.screening_reasons) state.data.screening_reasons = [];
+  if (!state.data.dbr_reasons) state.data.dbr_reasons = [];
+  if (!state.data.extraction_reasons) state.data.extraction_reasons = [];
+  if (!state.data.other_reasons) state.data.other_reasons = [];
+
+  // 1. Databases & Registers Totals
+  const lockDb = !!(state.options.dbDetail && state.data.databases.length > 0);
+  if (lockDb) {
+    state.data.database_results = state.data.databases.reduce((acc, d) => acc + (parseInt(d.count, 10) || 0), 0);
+  }
+  setInputLockState("inp-database_results", "lock-database_results", lockDb);
+
+  const lockReg = !!(state.options.regDetail && state.data.registers.length > 0);
+  if (lockReg) {
+    state.data.register_results = state.data.registers.reduce((acc, r) => acc + (parseInt(r.count, 10) || 0), 0);
+  }
+  setInputLockState("inp-register_results", "lock-register_results", lockReg);
+
+  // 2. Screening: Records Screened & Records Excluded
+  const totalIdentMain = (parseInt(state.data.database_results, 10) || 0) + (parseInt(state.data.register_results, 10) || 0);
+  const totalRemovedPre = (parseInt(state.data.duplicates, 10) || 0)
+    + (parseInt(state.data.excluded_automatic, 10) || 0)
+    + (parseInt(state.data.excluded_other, 10) || 0);
+  state.data.records_screened = Math.max(0, totalIdentMain - totalRemovedPre);
+
+  const lockScreenExcl = state.data.screening_reasons.length > 0;
+  if (lockScreenExcl) {
+    state.data.records_excluded = state.data.screening_reasons.reduce((acc, r) => acc + (parseInt(r.count, 10) || 0), 0);
+  }
+  setInputLockState("inp-records_excluded", "lock-records_excluded", lockScreenExcl);
+
+  // 3. Retrieval & Eligibility (Main Track)
+  state.data.dbr_sought_reports = Math.max(0, state.data.records_screened - (parseInt(state.data.records_excluded, 10) || 0));
+  state.data.dbr_assessed = Math.max(0, state.data.dbr_sought_reports - (parseInt(state.data.dbr_notretrieved_reports, 10) || 0));
+
+  const dbrExcludedSum = state.data.dbr_reasons.reduce((acc, r) => acc + (parseInt(r.count, 10) || 0), 0);
+  const dbrAfterEligibility = Math.max(0, state.data.dbr_assessed - dbrExcludedSum);
+
+  // 4. Other Methods Track (Retrieval & Eligibility)
+  const otherIdentTotal = (parseInt(state.data.website_results, 10) || 0)
+    + (parseInt(state.data.organisation_results, 10) || 0)
+    + (parseInt(state.data.citations_results, 10) || 0);
+  state.data.other_sought_reports = otherIdentTotal;
+  state.data.other_assessed = Math.max(0, state.data.other_sought_reports - (parseInt(state.data.other_notretrieved_reports, 10) || 0));
+
+  const otherExcludedSum = state.data.other_reasons.reduce((acc, r) => acc + (parseInt(r.count, 10) || 0), 0);
+  const otherAfterEligibility = state.options.other
+    ? Math.max(0, state.data.other_assessed - otherExcludedSum)
+    : 0;
+
+  // 5. Data Extraction Stage (Combines Main Track + Other Methods Track after Eligibility!)
+  const useExtractionStage = state.options.dataExtraction !== false;
+  state.data.dbr_extraction_assessed = dbrAfterEligibility + otherAfterEligibility;
+  const extractionExcludedSum = state.data.extraction_reasons.reduce((acc, r) => acc + (parseInt(r.count, 10) || 0), 0);
+
+  // 6. Final Inclusion (Reports locked; Studies remains user-editable)
+  if (useExtractionStage) {
+    state.data.new_reports = Math.max(0, state.data.dbr_extraction_assessed - extractionExcludedSum);
+  } else {
+    state.data.new_reports = dbrAfterEligibility + otherAfterEligibility;
+  }
+  state.data.total_reports = (parseInt(state.data.previous_reports, 10) || 0) + state.data.new_reports;
+  state.data.total_studies = (parseInt(state.data.previous_studies, 10) || 0) + (parseInt(state.data.new_studies, 10) || 0);
+
+  // Sync calculated numbers to DOM inputs without disrupting active typing on editable fields
+  const derivedKeys = [
+    "database_results", "register_results",
+    "records_screened", "records_excluded",
+    "dbr_sought_reports", "dbr_assessed", "dbr_extraction_assessed",
+    "other_sought_reports", "other_assessed",
+    "new_reports", "total_studies", "total_reports"
+  ];
+  derivedKeys.forEach(k => {
+    const inp = document.getElementById(`inp-${k}`);
+    if (inp && document.activeElement !== inp) {
+      inp.value = state.data[k];
+    } else if (inp && inp.readOnly) {
+      inp.value = state.data[k];
+    }
+  });
+
+  // Update live summary badges in Card 5 & Card 6
+  const elDbrExSum = document.getElementById("lbl-dbr-excluded-sum");
+  if (elDbrExSum) elDbrExSum.textContent = dbrExcludedSum;
+
+  const elDbrAfterCap = document.getElementById("lbl-dbr-after-elig-caption");
+  if (elDbrAfterCap) {
+    elDbrAfterCap.innerHTML = useExtractionStage
+      ? `To Data Extraction: <strong id="lbl-dbr-included-net" class="text-indigo-700">${dbrAfterEligibility}</strong> reports`
+      : `Included from Databases: <strong id="lbl-dbr-included-net" class="text-emerald-700">${dbrAfterEligibility}</strong> reports`;
+  }
+
+  const elExtFormula = document.getElementById("lbl-extraction-formula");
+  if (elExtFormula) {
+    elExtFormula.textContent = state.options.other
+      ? `Auto: ${dbrAfterEligibility} (Databases) + ${otherAfterEligibility} (Other Methods) = ${state.data.dbr_extraction_assessed} reports`
+      : `Auto: ${dbrAfterEligibility} reports from Databases`;
+  }
+
+  const elExtExSum = document.getElementById("lbl-extraction-excluded-sum");
+  if (elExtExSum) elExtExSum.textContent = extractionExcludedSum;
+
+  const elExtNet = document.getElementById("lbl-extraction-included-net");
+  if (elExtNet) elExtNet.textContent = state.data.new_reports;
+
+  const elOtherExSum = document.getElementById("lbl-other-excluded-sum");
+  if (elOtherExSum) elOtherExSum.textContent = otherExcludedSum;
+
+  const elOtherNet = document.getElementById("lbl-other-included-net");
+  if (elOtherNet) elOtherNet.textContent = otherAfterEligibility;
+
+  const elFormula = document.getElementById("lbl-reports-formula");
+  if (elFormula) {
+    if (useExtractionStage) {
+      elFormula.textContent = `Auto: ${state.data.dbr_extraction_assessed} (Extraction) - ${extractionExcludedSum} (Excluded) = ${state.data.new_reports} reports`;
+    } else if (state.options.other) {
+      elFormula.textContent = `Auto: ${dbrAfterEligibility} (Main) + ${otherAfterEligibility} (Other) = ${state.data.new_reports} reports`;
+    } else {
+      elFormula.textContent = `Auto: ${dbrAfterEligibility} reports from main flow`;
+    }
+  }
+}
+
 // SYNC FORM FIELDS FROM STATE
 function syncUIFromState() {
+  if (state.options.dataExtraction === undefined) {
+    state.options.dataExtraction = true;
+  }
+
   // Option controls
   const optLang = document.getElementById("opt-lang");
   if (optLang) optLang.value = state.options.lang;
@@ -1073,6 +1232,9 @@ function syncUIFromState() {
   const chkRegDetail = document.getElementById("chk-regDetail");
   if (chkRegDetail) chkRegDetail.checked = state.options.regDetail;
 
+  const chkDataExtraction = document.getElementById("chk-dataExtraction");
+  if (chkDataExtraction) chkDataExtraction.checked = state.options.dataExtraction !== false;
+
   const chkMeta = document.getElementById("chk-metaAnalysis");
   if (chkMeta) chkMeta.checked = state.options.metaAnalysis;
 
@@ -1087,6 +1249,9 @@ function syncUIFromState() {
 
   // Toggle conditional UI sections
   toggleConditionalCards();
+
+  // Recalculate all derived PRISMA values before populating inputs
+  recalculateFlowMath();
 
   // Numeric form fields
   for (const [key, val] of Object.entries(state.data)) {
@@ -1116,6 +1281,11 @@ function toggleConditionalCards() {
   const containerOtherEx = document.getElementById("sec-elig-other");
   if (containerOtherEx) {
     containerOtherEx.classList.toggle("hidden", !state.options.other);
+  }
+
+  const containerExtraction = document.getElementById("sec-elig-extraction");
+  if (containerExtraction) {
+    containerExtraction.classList.toggle("hidden", state.options.dataExtraction === false);
   }
 
   const containerMeta = document.getElementById("container-meta-analysis");
@@ -1194,7 +1364,7 @@ function renderFormLists() {
     `).join("");
   }
 
-  // Databases & Registers exclusion reasons list
+  // Databases & Registers exclusion reasons list (Eligibility)
   const dbrList = document.getElementById("dbr-reasons-list");
   if (dbrList) {
     dbrList.innerHTML = state.data.dbr_reasons.map((r, idx) => `
@@ -1210,6 +1380,29 @@ function renderFormLists() {
         <input type="text" value="${escapeHtml(r.reason)}" data-idx="${idx}" class="dbr-reason-input flex-1 text-xs px-2 py-1 border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500">
         <input type="number" min="0" value="${r.count}" data-idx="${idx}" class="dbr-count-input w-20 text-right text-xs px-2 py-1 border border-slate-300 rounded bg-white font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500">
         <button type="button" data-idx="${idx}" class="btn-del-dbr-reason text-slate-400 hover:text-rose-500 p-1 transition" title="Remove reason">
+          <i class="fa-solid fa-trash-can text-xs"></i>
+        </button>
+      </div>
+    `).join("");
+  }
+
+  // Data Extraction exclusion reasons list (Databases & Registers)
+  const extractionList = document.getElementById("extraction-reasons-list");
+  if (extractionList) {
+    if (!state.data.extraction_reasons) state.data.extraction_reasons = [];
+    extractionList.innerHTML = state.data.extraction_reasons.map((r, idx) => `
+      <div class="flex items-center space-x-1.5 bg-white p-1.5 rounded-lg border border-slate-200">
+        <div class="flex flex-col space-y-0.5">
+          <button type="button" data-idx="${idx}" class="btn-move-extraction-up text-slate-400 hover:text-indigo-600 disabled:opacity-20 p-0.5" title="Move Up" ${idx === 0 ? 'disabled' : ''}>
+            <i class="fa-solid fa-chevron-up text-[9px]"></i>
+          </button>
+          <button type="button" data-idx="${idx}" class="btn-move-extraction-down text-slate-400 hover:text-indigo-600 disabled:opacity-20 p-0.5" title="Move Down" ${idx === state.data.extraction_reasons.length - 1 ? 'disabled' : ''}>
+            <i class="fa-solid fa-chevron-down text-[9px]"></i>
+          </button>
+        </div>
+        <input type="text" value="${escapeHtml(r.reason)}" data-idx="${idx}" class="extraction-reason-input flex-1 text-xs px-2 py-1 border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Ex: Missing quantitative data during extraction">
+        <input type="number" min="0" value="${r.count}" data-idx="${idx}" class="extraction-count-input w-20 text-right text-xs px-2 py-1 border border-slate-300 rounded bg-white font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500">
+        <button type="button" data-idx="${idx}" class="btn-del-extraction-reason text-slate-400 hover:text-rose-500 p-1 transition" title="Remove reason">
           <i class="fa-solid fa-trash-can text-xs"></i>
         </button>
       </div>
@@ -1372,6 +1565,28 @@ function initPanAndZoom() {
       }
     });
   }
+
+  // Re-fit automatically when Tailwind CDN finishes styling or window resizes
+  window.addEventListener("load", () => {
+    fitToScreen();
+    setTimeout(fitToScreen, 250);
+  });
+  window.addEventListener("resize", () => {
+    if (!dragMoved) fitToScreen();
+  });
+  if (typeof ResizeObserver !== "undefined") {
+    let lastVpWidth = 0;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const w = Math.round(entry.contentRect.width);
+        if (w > 0 && Math.abs(w - lastVpWidth) > 15) {
+          lastVpWidth = w;
+          fitToScreen();
+        }
+      }
+    });
+    ro.observe(viewport);
+  }
 }
 
 function applyTransform() {
@@ -1390,19 +1605,19 @@ function fitToScreen() {
   const svg = document.getElementById("prisma-svg");
   if (!viewport || !svg) return;
 
-  const vpWidth = viewport.clientWidth - 40;
-  const vpHeight = viewport.clientHeight - 40;
+  const vpWidth = viewport.clientWidth - 24;
+  const vpHeight = viewport.clientHeight - 24;
   const svgWidth = parseFloat(svg.getAttribute("width")) || 1000;
   const svgHeight = parseFloat(svg.getAttribute("height")) || 800;
 
-  if (svgWidth <= 0 || svgHeight <= 0) return;
+  if (vpWidth <= 0 || vpHeight <= 0 || svgWidth <= 0 || svgHeight <= 0) return;
 
   const scaleX = vpWidth / svgWidth;
   const scaleY = vpHeight / svgHeight;
-  zoomLevel = Math.min(scaleX, scaleY, 1.0); // Never exceed 100% on initial fit
+  zoomLevel = Math.min(scaleX, scaleY, 1.35);
 
-  panX = Math.max(10, (viewport.clientWidth - svgWidth * zoomLevel) / 2);
-  panY = Math.max(10, (viewport.clientHeight - svgHeight * zoomLevel) / 2);
+  panX = Math.max(8, (viewport.clientWidth - svgWidth * zoomLevel) / 2);
+  panY = Math.max(8, (viewport.clientHeight - svgHeight * zoomLevel) / 2);
   applyTransform();
 }
 
@@ -1446,6 +1661,7 @@ function bindEvents() {
   bindCheckbox("chk-other", "other");
   bindCheckbox("chk-dbDetail", "dbDetail");
   bindCheckbox("chk-regDetail", "regDetail");
+  bindCheckbox("chk-dataExtraction", "dataExtraction");
   bindCheckbox("chk-metaAnalysis", "metaAnalysis");
   bindCheckbox("chk-hideZero", "hideZero");
   bindCheckbox("chk-includeNew", "includeNew");
@@ -1458,7 +1674,7 @@ function bindEvents() {
     "website_results", "organisation_results", "citations_results",
     "duplicates", "excluded_automatic", "excluded_other",
     "records_screened", "records_excluded",
-    "dbr_sought_reports", "dbr_notretrieved_reports", "dbr_assessed",
+    "dbr_sought_reports", "dbr_notretrieved_reports", "dbr_assessed", "dbr_extraction_assessed",
     "other_sought_reports", "other_notretrieved_reports", "other_assessed",
     "new_studies", "new_reports",
     "total_studies", "total_reports",
@@ -1469,7 +1685,9 @@ function bindEvents() {
     const input = document.getElementById(`inp-${key}`);
     if (input) {
       input.addEventListener("input", (e) => {
+        if (input.readOnly) return;
         state.data[key] = parseInt(e.target.value, 10) || 0;
+        recalculateFlowMath();
         autoSave();
         renderDiagram();
       });
@@ -1480,6 +1698,7 @@ function bindEvents() {
   document.getElementById("btn-add-db")?.addEventListener("click", () => {
     state.data.databases.push({ name: `Database ${state.data.databases.length + 1}`, count: 0 });
     renderFormLists();
+    recalculateFlowMath();
     autoSave();
     renderDiagram();
   });
@@ -1487,6 +1706,7 @@ function bindEvents() {
   document.getElementById("btn-add-reg")?.addEventListener("click", () => {
     state.data.registers.push({ name: `Register ${state.data.registers.length + 1}`, count: 0 });
     renderFormLists();
+    recalculateFlowMath();
     autoSave();
     renderDiagram();
   });
@@ -1495,6 +1715,7 @@ function bindEvents() {
     if (!state.data.screening_reasons) state.data.screening_reasons = [];
     state.data.screening_reasons.push({ reason: `Screening Reason ${state.data.screening_reasons.length + 1}`, count: 0 });
     renderFormLists();
+    recalculateFlowMath();
     autoSave();
     renderDiagram();
   });
@@ -1502,13 +1723,25 @@ function bindEvents() {
   document.getElementById("btn-add-dbr-reason")?.addEventListener("click", () => {
     state.data.dbr_reasons.push({ reason: `Reason ${state.data.dbr_reasons.length + 1}`, count: 0 });
     renderFormLists();
+    recalculateFlowMath();
     autoSave();
     renderDiagram();
+  });
+
+  document.getElementById("btn-add-extraction-reason")?.addEventListener("click", () => {
+    if (!state.data.extraction_reasons) state.data.extraction_reasons = [];
+    state.data.extraction_reasons.push({ reason: `Extraction Reason ${state.data.extraction_reasons.length + 1}`, count: 0 });
+    renderFormLists();
+    recalculateFlowMath();
+    autoSave();
+    renderDiagram();
+    fitToScreen();
   });
 
   document.getElementById("btn-add-other-reason")?.addEventListener("click", () => {
     state.data.other_reasons.push({ reason: `Reason ${state.data.other_reasons.length + 1}`, count: 0 });
     renderFormLists();
+    recalculateFlowMath();
     autoSave();
     renderDiagram();
   });
@@ -1524,6 +1757,7 @@ function bindEvents() {
     } else if (t.classList.contains("db-count-input")) {
       const idx = parseInt(t.getAttribute("data-idx"), 10);
       state.data.databases[idx].count = parseInt(t.value, 10) || 0;
+      recalculateFlowMath();
       autoSave();
       renderDiagram();
     } else if (t.classList.contains("reg-name-input")) {
@@ -1534,6 +1768,7 @@ function bindEvents() {
     } else if (t.classList.contains("reg-count-input")) {
       const idx = parseInt(t.getAttribute("data-idx"), 10);
       state.data.registers[idx].count = parseInt(t.value, 10) || 0;
+      recalculateFlowMath();
       autoSave();
       renderDiagram();
     } else if (t.classList.contains("screen-reason-input")) {
@@ -1544,6 +1779,7 @@ function bindEvents() {
     } else if (t.classList.contains("screen-count-input")) {
       const idx = parseInt(t.getAttribute("data-idx"), 10);
       state.data.screening_reasons[idx].count = parseInt(t.value, 10) || 0;
+      recalculateFlowMath();
       autoSave();
       renderDiagram();
     } else if (t.classList.contains("dbr-reason-input")) {
@@ -1554,6 +1790,18 @@ function bindEvents() {
     } else if (t.classList.contains("dbr-count-input")) {
       const idx = parseInt(t.getAttribute("data-idx"), 10);
       state.data.dbr_reasons[idx].count = parseInt(t.value, 10) || 0;
+      recalculateFlowMath();
+      autoSave();
+      renderDiagram();
+    } else if (t.classList.contains("extraction-reason-input")) {
+      const idx = parseInt(t.getAttribute("data-idx"), 10);
+      state.data.extraction_reasons[idx].reason = t.value;
+      autoSave();
+      renderDiagram();
+    } else if (t.classList.contains("extraction-count-input")) {
+      const idx = parseInt(t.getAttribute("data-idx"), 10);
+      state.data.extraction_reasons[idx].count = parseInt(t.value, 10) || 0;
+      recalculateFlowMath();
       autoSave();
       renderDiagram();
     } else if (t.classList.contains("other-reason-input")) {
@@ -1564,6 +1812,7 @@ function bindEvents() {
     } else if (t.classList.contains("other-count-input")) {
       const idx = parseInt(t.getAttribute("data-idx"), 10);
       state.data.other_reasons[idx].count = parseInt(t.value, 10) || 0;
+      recalculateFlowMath();
       autoSave();
       renderDiagram();
     }
@@ -1603,6 +1852,15 @@ function bindEvents() {
     if (btnUpDbr) {
       const idx = parseInt(btnUpDbr.getAttribute("data-idx"), 10);
       swapArrayItems(state.data.dbr_reasons, idx, idx - 1);
+      renderFormLists();
+      autoSave();
+      renderDiagram();
+      return;
+    }
+    const btnUpExt = e.target.closest(".btn-move-extraction-up");
+    if (btnUpExt) {
+      const idx = parseInt(btnUpExt.getAttribute("data-idx"), 10);
+      swapArrayItems(state.data.extraction_reasons, idx, idx - 1);
       renderFormLists();
       autoSave();
       renderDiagram();
@@ -1655,6 +1913,15 @@ function bindEvents() {
       renderDiagram();
       return;
     }
+    const btnDownExt = e.target.closest(".btn-move-extraction-down");
+    if (btnDownExt) {
+      const idx = parseInt(btnDownExt.getAttribute("data-idx"), 10);
+      swapArrayItems(state.data.extraction_reasons, idx, idx + 1);
+      renderFormLists();
+      autoSave();
+      renderDiagram();
+      return;
+    }
     const btnDownOther = e.target.closest(".btn-move-other-down");
     if (btnDownOther) {
       const idx = parseInt(btnDownOther.getAttribute("data-idx"), 10);
@@ -1671,6 +1938,7 @@ function bindEvents() {
       const idx = parseInt(btnDelDb.getAttribute("data-idx"), 10);
       state.data.databases.splice(idx, 1);
       renderFormLists();
+      recalculateFlowMath();
       autoSave();
       renderDiagram();
       return;
@@ -1680,6 +1948,7 @@ function bindEvents() {
       const idx = parseInt(btnDelReg.getAttribute("data-idx"), 10);
       state.data.registers.splice(idx, 1);
       renderFormLists();
+      recalculateFlowMath();
       autoSave();
       renderDiagram();
       return;
@@ -1689,6 +1958,7 @@ function bindEvents() {
       const idx = parseInt(btnDelScreen.getAttribute("data-idx"), 10);
       state.data.screening_reasons.splice(idx, 1);
       renderFormLists();
+      recalculateFlowMath();
       autoSave();
       renderDiagram();
       return;
@@ -1698,6 +1968,17 @@ function bindEvents() {
       const idx = parseInt(btnDelDbr.getAttribute("data-idx"), 10);
       state.data.dbr_reasons.splice(idx, 1);
       renderFormLists();
+      recalculateFlowMath();
+      autoSave();
+      renderDiagram();
+      return;
+    }
+    const btnDelExt = e.target.closest(".btn-del-extraction-reason");
+    if (btnDelExt) {
+      const idx = parseInt(btnDelExt.getAttribute("data-idx"), 10);
+      state.data.extraction_reasons.splice(idx, 1);
+      renderFormLists();
+      recalculateFlowMath();
       autoSave();
       renderDiagram();
       return;
@@ -1707,6 +1988,7 @@ function bindEvents() {
       const idx = parseInt(btnDelOther.getAttribute("data-idx"), 10);
       state.data.other_reasons.splice(idx, 1);
       renderFormLists();
+      recalculateFlowMath();
       autoSave();
       renderDiagram();
       return;
@@ -2239,14 +2521,18 @@ function renderDiagram() {
   const svg = document.getElementById("prisma-svg");
   if (!svg) return;
 
+  // Enforce mathematical consistency across all stages before rendering
+  recalculateFlowMath();
+
   const lang = state.options.lang || 'en';
   const t = i18n[lang] || i18n.en;
   const th = themes[state.options.theme] || themes.official;
   const hideZero = state.options.hideZero !== false;
+  const useExtractionStage = state.options.dataExtraction !== false;
 
   // DIMENSIONS AND GEOMETRY
   const stageColWidth = 26;
-  const boxW = 215; // Width of standard PRISMA boxes
+  const boxW = 235; // Width of standard PRISMA boxes (expanded for academic labels)
   const colGap = 32; // Gap between columns in each track
   const trackGap = 40; // Gap between Main Track and Other Methods Track
 
@@ -2364,7 +2650,7 @@ function renderDiagram() {
     `(n = ${state.data.dbr_assessed || 0})`
   ];
 
-  // 8. Box 8: Reports excluded reasons (Main track)
+  // 8. Box 8: Reports excluded reasons in Eligibility (Main track)
   const box8Lines = [t.reports_excluded];
   if (state.data.dbr_reasons && state.data.dbr_reasons.length > 0) {
     state.data.dbr_reasons.forEach(r => {
@@ -2374,6 +2660,22 @@ function renderDiagram() {
     });
   } else {
     box8Lines.push(`Reason 1 (n = 0)`);
+  }
+
+  // 8B. Box 7B & Box 8B: Data Extraction Stage (Main track)
+  const box7bLines = [
+    t.reports_extraction_assessed || "Reports included in data extraction",
+    `(n = ${state.data.dbr_extraction_assessed || 0})`
+  ];
+  const box8bLines = [t.reports_extraction_excluded || "Reports excluded during data extraction:"];
+  if (state.data.extraction_reasons && state.data.extraction_reasons.length > 0) {
+    state.data.extraction_reasons.forEach(r => {
+      if (!hideZero || r.count > 0 || state.data.extraction_reasons.length === 1) {
+        box8bLines.push(`${r.reason} (n = ${r.count})`);
+      }
+    });
+  } else {
+    box8bLines.push(`(n = 0)`);
   }
 
   // 9. Box 9: Studies included in review (Supports non-new vs new wording)
@@ -2443,6 +2745,78 @@ function renderDiagram() {
     box14Lines.push(`Reason 1 (n = 0)`);
   }
 
+  // HELPER: AUTOMATIC PIXEL-ACCURATE WORD WRAPPING FOR ALL BOXES
+  const maxTextPixelWidth = boxW - 18; // 9px horizontal padding on each side inside box
+  let textMeasureCtx = null;
+  try {
+    const c = document.createElement("canvas");
+    textMeasureCtx = c.getContext("2d");
+    if (textMeasureCtx) {
+      textMeasureCtx.font = "400 10px -apple-system, BlinkMacSystemFont, Arial, sans-serif";
+    }
+  } catch (e) {}
+
+  function measureLinePx(str) {
+    if (textMeasureCtx) {
+      return textMeasureCtx.measureText(str).width;
+    }
+    return str.length * 5.6;
+  }
+
+  function wrapBoxLinesInPlace(linesArr) {
+    const wrapped = [];
+    linesArr.forEach(rawLine => {
+      const line = String(rawLine || "").trim();
+      if (!line) return;
+      if (measureLinePx(line) <= maxTextPixelWidth) {
+        wrapped.push(line);
+        return;
+      }
+      // Keep parenthetical counts like "(n = 30)" as a single non-breaking token
+      const protectedLine = line.replace(/\(\s*n\s*=\s*[^)]+\)/gi, match => match.replace(/\s+/g, "\u00A0"));
+      const words = protectedLine.split(/\s+/);
+      let currentLine = "";
+
+      words.forEach(word => {
+        const cleanWord = word.replace(/\u00A0/g, " ");
+        const candidate = currentLine ? `${currentLine} ${cleanWord}` : cleanWord;
+        if (measureLinePx(candidate) <= maxTextPixelWidth) {
+          currentLine = candidate;
+        } else {
+          if (currentLine) {
+            wrapped.push(currentLine);
+          }
+          if (measureLinePx(cleanWord) > maxTextPixelWidth) {
+            let chunk = "";
+            for (const ch of cleanWord) {
+              if (measureLinePx(chunk + ch) <= maxTextPixelWidth) {
+                chunk += ch;
+              } else {
+                if (chunk) wrapped.push(chunk);
+                chunk = ch;
+              }
+            }
+            currentLine = chunk;
+          } else {
+            currentLine = cleanWord;
+          }
+        }
+      });
+      if (currentLine) {
+        wrapped.push(currentLine);
+      }
+    });
+    linesArr.length = 0;
+    linesArr.push(...wrapped);
+  }
+
+  [
+    box1Lines, box2Lines, box3Lines, box4Lines,
+    box5Lines, box6Lines, box7Lines, box8Lines,
+    box7bLines, box8bLines, box9Lines, box10Lines,
+    box11Lines, box12Lines, box13Lines, box14Lines
+  ].forEach(wrapBoxLinesInPlace);
+
   // HELPER: CALCULATE BOX HEIGHT FROM LINE COUNT
   const lineHeight = 13.5;
   const paddingY = 16;
@@ -2486,17 +2860,40 @@ function renderDiagram() {
   const hBox14 = state.options.other ? calcBoxHeight(box14Lines) : 0;
   const r5Height = Math.max(hBox7, hBox8, hBox13, hBox14);
 
+  // ROW 5B & 5C: DATA EXTRACTION STAGE (OPTIONAL, ON BY DEFAULT)
+  // Row 5B has Box 7B (Reports included in data extraction) in Col 1, receiving the Blue Arrow from Box 13 (Other Methods) on its right edge.
+  // Row 5C has Box 8B (Reports excluded during data extraction) in Col 2, receiving the Red Arrow branching off the vertical line between Box 7B and Box 9.
+  let r5bY = 0;
+  let hBox7b = 0;
+  let r5cY = 0;
+  let hBox8b = 0;
+  if (useExtractionStage) {
+    r5bY = r5Y + r5Height + rowGap;
+    hBox7b = calcBoxHeight(box7bLines);
+    r5cY = r5bY + hBox7b + 18;
+    hBox8b = calcBoxHeight(box8bLines);
+  }
+
   // ROW 6: INCLUDED
-  const r6Y = r5Y + r5Height + 36;
+  const lastPreIncludedBottom = useExtractionStage ? (r5cY + hBox8b) : (r5Y + r5Height);
+  const r6Y = lastPreIncludedBottom + 26;
   const hBox9 = calcBoxHeight(box9Lines);
   const r6Height = hBox9;
 
   // ROW 7: META-ANALYSIS (OPTIONAL)
   let r7Y = 0;
   let r7Height = 0;
+  let metaLines = [];
   if (state.options.metaAnalysis) {
+    metaLines = [
+      t.ma_studies_inc,
+      `(n = ${state.data.total_studies_ma || 0})`,
+      t.ma_reports_inc,
+      `(n = ${state.data.total_reports_ma || 0})`
+    ];
+    wrapBoxLinesInPlace(metaLines);
     r7Y = r6Y + r6Height + 28;
-    r7Height = 48;
+    r7Height = calcBoxHeight(metaLines);
   }
 
   const totalHeight = (state.options.metaAnalysis ? r7Y + r7Height : r6Y + r6Height) + 30;
@@ -2528,8 +2925,8 @@ function renderDiagram() {
   // Badge 1: Identification (covers Row 2)
   el.push(drawStagePill(stageX, r2Y, stageColWidth, r2Height, t.stage_ident, th));
 
-  // Badge 2: Screening (covers Row 3 to Row 5)
-  const screeningTotalHeight = (r5Y + r5Height) - r3Y;
+  // Badge 2: Screening (covers Row 3 to Row 5 / Row 5B)
+  const screeningTotalHeight = lastPreIncludedBottom - r3Y;
   el.push(drawStagePill(stageX, r3Y, stageColWidth, screeningTotalHeight, t.stage_screen, th));
 
   // Badge 3: Included (covers Row 6)
@@ -2549,6 +2946,7 @@ function renderDiagram() {
       t.prev_reports_inc,
       `(n = ${state.data.previous_reports || 0})`
     ];
+    wrapBoxLinesInPlace(prevLines);
     const prevH = calcBoxHeight(prevLines);
     el.push(drawBoxWhite(prevColX, r2Y, boxW, prevH, prevLines, th, "inp-previous_studies", "sec-prev"));
 
@@ -2662,15 +3060,44 @@ function renderDiagram() {
     el.push(drawBoxGrey(col4X, r5Y, boxW, hBox14, box14Lines, th, "other-reasons-list", "sec-elig"));
   }
 
+  // 7B. ROW 5B & 5C: DATA EXTRACTION STAGE (IF ENABLED)
+  if (useExtractionStage) {
+    // Vertical Arrow: Box 7 (Assessed for Eligibility) -> Box 7B (Included in Data Extraction)
+    el.push(drawArrow(col1X + boxW / 2, r5Y + hBox7, col1X + boxW / 2, r5bY, th.arrowColor));
+
+    // Box 7B (Col 1): Reports included in data extraction
+    el.push(drawBoxWhite(col1X, r5bY, boxW, hBox7b, box7bLines, th, "inp-dbr_extraction_assessed", "sec-elig"));
+
+    // Elbow Arrow (Blue Arrow): From Box 13 (Other Methods Assessed) into right edge of Box 7B (Reports included in data extraction)
+    if (state.options.other) {
+      const elbowStartX = col3X + boxW / 2;
+      const elbowStartY = r5Y + hBox13;
+      const elbowTargetX = col1X + boxW;
+      const elbowTargetY = r5bY + hBox7b / 2;
+
+      el.push(`
+        <path d="M ${elbowStartX} ${elbowStartY} L ${elbowStartX} ${elbowTargetY} L ${elbowTargetX} ${elbowTargetY}" fill="none" stroke="${th.arrowColor}" stroke-width="1.2" marker-end="url(#arrow)" />
+      `);
+    }
+
+    // Horizontal Arrow (Red Arrow): Branches from the vertical line below Box 7B into left edge of Box 8B (Reports excluded during data extraction)
+    const r5cMidY = r5cY + hBox8b / 2;
+    el.push(drawArrow(col1X + boxW / 2, r5cMidY, col2X, r5cMidY, th.arrowColor));
+
+    // Box 8B (Col 2): Reports excluded during data extraction
+    el.push(drawBoxWhite(col2X, r5cY, boxW, hBox8b, box8bLines, th, "extraction-reasons-list", "sec-elig"));
+  }
+
   // 8. ROW 6: INCLUDED
-  // Vertical Arrow: Box 7 -> Box 9
-  el.push(drawArrow(col1X + boxW / 2, r5Y + hBox7, col1X + boxW / 2, r6Y, th.arrowColor));
+  // Vertical Arrow: Box 7B (or Box 7) -> Box 9
+  const mainPreIncludedBottomY = useExtractionStage ? (r5bY + hBox7b) : (r5Y + hBox7);
+  el.push(drawArrow(col1X + boxW / 2, mainPreIncludedBottomY, col1X + boxW / 2, r6Y, th.arrowColor));
 
   // Box 9 (Col 1): New studies included in review
   el.push(drawBoxWhite(col1X, r6Y, boxW, hBox9, box9Lines, th, "inp-new_studies", "sec-inc"));
 
-  // Elbow Arrow from Box 13 (Other Track) to right edge of Box 9
-  if (state.options.other) {
+  // Elbow Arrow from Box 13 (Other Track) to right edge of Box 9 ONLY when Data Extraction stage is disabled
+  if (state.options.other && !useExtractionStage) {
     const elbowStartX = col3X + boxW / 2;
     const elbowStartY = r5Y + hBox13;
     const elbowTargetX = col1X + boxW;
@@ -2683,12 +3110,6 @@ function renderDiagram() {
 
   // 9. ROW 7: META-ANALYSIS (OPTIONAL)
   if (state.options.metaAnalysis) {
-    const metaLines = [
-      t.ma_studies_inc,
-      `(n = ${state.data.total_studies_ma || 0})`,
-      t.ma_reports_inc,
-      `(n = ${state.data.total_reports_ma || 0})`
-    ];
     el.push(drawArrow(col1X + boxW / 2, r6Y + hBox9, col1X + boxW / 2, r7Y, th.arrowColor));
     el.push(drawBoxWhite(col1X, r7Y, boxW, r7Height, metaLines, th, "inp-total_studies_ma", "sec-inc"));
   }
